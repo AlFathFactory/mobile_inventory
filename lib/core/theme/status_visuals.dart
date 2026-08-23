@@ -34,7 +34,7 @@ extension MovementTypeVisuals on MovementType {
 
   Color get color => switch (this) {
     MovementType.addition => AppColors.safe,
-    MovementType.issue => AppColors.accent,
+    MovementType.issue => const Color.fromARGB(255, 236, 184, 11),
     MovementType.returned => AppColors.returnColor,
     MovementType.adjustment => AppColors.neutral700,
   };

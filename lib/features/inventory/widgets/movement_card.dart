@@ -84,11 +84,7 @@ class MovementCard extends StatelessWidget {
               ],
             ),
           ),
-          // const Divider(height: 1, color: AppColors.divider),
-          // Padding(
-          //   padding: const EdgeInsets.fromLTRB(14, 11, 14, 13),
-          //   child: QuantityTransition(movement: movement),
-          // ),
+
           if (_hasDetails) ...[
             const Divider(height: 1, color: AppColors.divider),
             Padding(
@@ -264,8 +260,7 @@ class _DetailRow extends StatelessWidget {
         children: [
           Icon(icon, size: 16, color: AppColors.neutral500),
           const SizedBox(width: 7),
-          SizedBox(width: 72, child: Text(label, style: AppTextStyles.caption)),
-          const SizedBox(width: 8),
+          SizedBox(width: 50, child: Text(label, style: AppTextStyles.caption)),
           Expanded(
             child: Text(
               value,
