@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-enum ReportPeriod { last30Days, all }
+enum ReportPeriod { last30Days, all, custom }
 
 @immutable
 class ReportSnapshot {

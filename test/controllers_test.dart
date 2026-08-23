@@ -5,6 +5,8 @@ import 'package:el_fateh/features/inventory/model/inventory_filter.dart';
 import 'package:el_fateh/features/inventory/model/inventory_item.dart';
 import 'package:el_fateh/features/inventory/model/inventory_movement.dart';
 import 'package:el_fateh/features/reports/controller/reports_controller.dart';
+import 'package:el_fateh/features/reports/model/report_filter.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -84,5 +86,28 @@ void main() {
     controller.selectType(null);
     controller.selectProject('ورشة الصيانة');
     expect(controller.visibleMovements.single.itemCode, 'WD-WR-030');
+  });
+
+  test('ReportsController applies an inclusive custom date range', () {
+    final controller = ReportsController(PreviewData.reportMovements);
+    addTearDown(controller.dispose);
+
+    controller.selectDateRange(
+      DateTimeRange(
+        start: DateTime(2026, 8, 10, 20),
+        end: DateTime(2026, 8, 13, 1),
+      ),
+    );
+
+    expect(controller.period, ReportPeriod.custom);
+    expect(
+      controller.visibleMovements.map((movement) => movement.itemCode),
+      containsAll(<String>['EL-CB-025', 'WD-WR-030']),
+    );
+    expect(controller.visibleMovements, hasLength(2));
+
+    controller.selectPeriod(ReportPeriod.all);
+    expect(controller.dateRange, isNull);
+    expect(controller.visibleMovements, hasLength(3));
   });
 }

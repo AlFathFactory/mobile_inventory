@@ -32,11 +32,19 @@ class AppDropdown<T> extends StatelessWidget {
             value: value,
             hint: Text(hint, style: AppTextStyles.caption),
             isDense: true,
+            isExpanded: true,
             borderRadius: BorderRadius.circular(10),
             style: AppTextStyles.label,
             items: [
               for (final entry in options.entries)
-                DropdownMenuItem<T>(value: entry.key, child: Text(entry.value)),
+                DropdownMenuItem<T>(
+                  value: entry.key,
+                  child: Text(
+                    entry.value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
             ],
             onChanged: onChanged,
           ),

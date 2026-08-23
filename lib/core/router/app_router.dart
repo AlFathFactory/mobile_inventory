@@ -49,10 +49,9 @@ class AppRouter {
                 builder: (context, state) => DashboardView(
                   metrics: PreviewData.dashboardMetrics,
                   categories: PreviewData.categories,
-                  attentionItems: [
-                    PreviewData.itemByCode('GS-OX-004'),
-                    PreviewData.itemByCode('HW-SC-112'),
-                  ],
+                  recentMovements: PreviewData.reportMovements
+                      .take(3)
+                      .toList(growable: false),
                   onShowInventory: (category) {
                     if (category == null) {
                       inventoryController.clearFilters();
@@ -62,7 +61,7 @@ class AppRouter {
                     context.goNamed(AppRouteNames.inventory);
                   },
                   onShowAlerts: () => context.goNamed(AppRouteNames.alerts),
-                  onOpenItem: (item) => _openItem(context, item),
+                  onShowReports: () => context.goNamed(AppRouteNames.reports),
                 ),
               ),
             ],

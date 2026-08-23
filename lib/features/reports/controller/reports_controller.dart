@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 import '../../inventory/model/inventory_movement.dart';
 import '../model/report_filter.dart';
@@ -12,11 +12,13 @@ class ReportsController extends ChangeNotifier {
   final List<InventoryMovement> _movements;
   MovementType? _selectedType;
   ReportPeriod _period = ReportPeriod.last30Days;
+  DateTimeRange? _dateRange;
   String? _project;
   String? _category;
 
   MovementType? get selectedType => _selectedType;
   ReportPeriod get period => _period;
+  DateTimeRange? get dateRange => _dateRange;
   String? get project => _project;
   String? get category => _category;
   ReportSnapshot get snapshot =>
@@ -39,8 +41,15 @@ class ReportsController extends ChangeNotifier {
   List<InventoryMovement> get visibleMovements => _movements
       .where((movement) {
         final cutoff = _previewDate.subtract(const Duration(days: 30));
-        final matchesPeriod =
-            _period == ReportPeriod.all || !movement.date.isBefore(cutoff);
+        final movementDate = DateUtils.dateOnly(movement.date);
+        final matchesPeriod = switch (_period) {
+          ReportPeriod.last30Days => !movementDate.isBefore(cutoff),
+          ReportPeriod.all => true,
+          ReportPeriod.custom =>
+            _dateRange != null &&
+                !movementDate.isBefore(_dateRange!.start) &&
+                !movementDate.isAfter(_dateRange!.end),
+        };
         final matchesType =
             _selectedType == null || movement.type == _selectedType;
         final matchesProject = _project == null || movement.project == _project;
@@ -60,8 +69,27 @@ class ReportsController extends ChangeNotifier {
   }
 
   void selectPeriod(ReportPeriod period) {
+    if (period == ReportPeriod.custom) return;
     if (_period == period) return;
     _period = period;
+    _dateRange = null;
+    notifyListeners();
+  }
+
+  void selectDateRange(DateTimeRange range) {
+    final first = DateUtils.dateOnly(range.start);
+    final second = DateUtils.dateOnly(range.end);
+    final normalizedRange = DateTimeRange(
+      start: first.isBefore(second) ? first : second,
+      end: first.isBefore(second) ? second : first,
+    );
+    if (_period == ReportPeriod.custom &&
+        _dateRange?.start == normalizedRange.start &&
+        _dateRange?.end == normalizedRange.end) {
+      return;
+    }
+    _period = ReportPeriod.custom;
+    _dateRange = normalizedRange;
     notifyListeners();
   }
 

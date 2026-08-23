@@ -4,6 +4,7 @@ import '../../../core/widgets/app_components.dart';
 import '../../inventory/model/inventory_movement.dart';
 import '../controller/reports_controller.dart';
 import '../model/report_filter.dart';
+import 'report_date_range_picker.dart';
 
 class ReportFilters extends StatelessWidget {
   const ReportFilters({required this.controller, super.key});
@@ -12,6 +13,13 @@ class ReportFilters extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = MaterialLocalizations.of(context);
+    final dateRange = controller.dateRange;
+    final customPeriodLabel = dateRange == null
+        ? 'تحديد التاريخ'
+        : '${localizations.formatShortDate(dateRange.start)}'
+              ' – '
+              '${localizations.formatShortDate(dateRange.end)}';
     final projectOptions = <String, String>{
       '': 'المشروع: الكل',
       for (final project in controller.projects) project: project,
@@ -29,20 +37,32 @@ class ReportFilters extends StatelessWidget {
           runSpacing: 8,
           children: [
             SizedBox(
+              width: 180,
               height: 36,
               child: AppDropdown<ReportPeriod>(
                 value: controller.period,
                 hint: 'الفترة',
-                options: const {
+                options: {
                   ReportPeriod.last30Days: 'آخر 30 يوم',
                   ReportPeriod.all: 'كل الفترات',
+                  ReportPeriod.custom: customPeriodLabel,
                 },
-                onChanged: (value) {
-                  if (value != null) controller.selectPeriod(value);
+                onChanged: (value) async {
+                  if (value == null) return;
+                  if (value == ReportPeriod.custom) {
+                    final range = await showReportDateRangePicker(
+                      context: context,
+                      initialRange: controller.dateRange,
+                    );
+                    if (range != null) controller.selectDateRange(range);
+                    return;
+                  }
+                  controller.selectPeriod(value);
                 },
               ),
             ),
             SizedBox(
+              width: 150,
               height: 36,
               child: AppDropdown<String>(
                 value: controller.project ?? '',
@@ -54,6 +74,7 @@ class ReportFilters extends StatelessWidget {
               ),
             ),
             SizedBox(
+              width: 150,
               height: 36,
               child: AppDropdown<String>(
                 value: controller.category ?? '',
