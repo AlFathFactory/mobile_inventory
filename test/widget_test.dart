@@ -15,15 +15,15 @@ void main() {
     expect(Directionality.of(titleContext), TextDirection.rtl);
     expect(find.text('إجمالي الأصناف'), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.inventory_2_outlined));
+    await tester.tap(find.byKey(const Key('nav-inventory')));
     await tester.pumpAndSettle();
     expect(find.text('ابحث باسم الصنف أو الكود'), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.notifications_none_rounded));
+    await tester.tap(find.byKey(const Key('nav-alerts')));
     await tester.pumpAndSettle();
     expect(find.text('تنبيهات المخزون'), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.bar_chart_outlined));
+    await tester.tap(find.byKey(const Key('nav-reports')));
     await tester.pumpAndSettle();
     expect(find.text('إجمالي الحركات'), findsOneWidget);
   });
@@ -34,7 +34,7 @@ void main() {
     await tester.pumpWidget(const MyApp(previewLoadDelay: Duration.zero));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.inventory_2_outlined));
+    await tester.tap(find.byKey(const Key('nav-inventory')));
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const Key('inventory-search')),
@@ -43,9 +43,9 @@ void main() {
     await tester.pump();
     expect(find.text('اسطوانة أكسجين صناعي'), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.bar_chart_outlined));
+    await tester.tap(find.byKey(const Key('nav-reports')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(Icons.inventory_2_outlined));
+    await tester.tap(find.byKey(const Key('nav-inventory')));
     await tester.pumpAndSettle();
 
     final search = tester.widget<TextField>(
@@ -59,7 +59,7 @@ void main() {
   ) async {
     await tester.pumpWidget(const MyApp(previewLoadDelay: Duration.zero));
     await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(Icons.inventory_2_outlined));
+    await tester.tap(find.byKey(const Key('nav-inventory')));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('open-inventory-filters')));
@@ -83,7 +83,7 @@ void main() {
   ) async {
     await tester.pumpWidget(const MyApp(previewLoadDelay: Duration.zero));
     await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(Icons.inventory_2_outlined));
+    await tester.tap(find.byKey(const Key('nav-inventory')));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('هيمباريم 500 × 16 لتر رال 7032').first);
@@ -140,12 +140,12 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
 
-      for (final icon in [
-        Icons.inventory_2_outlined,
-        Icons.notifications_none_rounded,
-        Icons.bar_chart_outlined,
+      for (final destinationKey in [
+        const Key('nav-inventory'),
+        const Key('nav-alerts'),
+        const Key('nav-reports'),
       ]) {
-        await tester.tap(find.byIcon(icon));
+        await tester.tap(find.byKey(destinationKey));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
       }

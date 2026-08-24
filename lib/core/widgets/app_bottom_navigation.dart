@@ -22,26 +22,52 @@ class AppBottomNavigation extends StatelessWidget {
       indicatorColor: AppColors.accentSoft,
       destinations: const [
         NavigationDestination(
-          icon: Icon(Icons.home_outlined),
-          selectedIcon: Icon(Icons.home_rounded),
+          key: Key('nav-dashboard'),
+          icon: _NavigationAssetIcon('assets/image/bnv/home.png'),
+          selectedIcon: _NavigationAssetIcon(
+            'assets/image/bnv/home_selected.png',
+          ),
           label: 'الرئيسية',
         ),
         NavigationDestination(
-          icon: Icon(Icons.inventory_2_outlined),
-          selectedIcon: Icon(Icons.inventory_2_rounded),
+          key: Key('nav-inventory'),
+          icon: _NavigationAssetIcon('assets/image/bnv/box.png'),
+          selectedIcon: _NavigationAssetIcon(
+            'assets/image/bnv/box_selected.png',
+          ),
           label: 'المخزون',
         ),
         NavigationDestination(
-          icon: Icon(Icons.notifications_none_rounded),
-          selectedIcon: Icon(Icons.notifications_rounded),
+          key: Key('nav-alerts'),
+          icon: _NavigationAssetIcon('assets/image/bnv/notification.png'),
+          selectedIcon: _NavigationAssetIcon(
+            'assets/image/bnv/notification_selected.png',
+          ),
           label: 'التنبيهات',
         ),
         NavigationDestination(
+          key: Key('nav-reports'),
           icon: Icon(Icons.bar_chart_outlined),
           selectedIcon: Icon(Icons.bar_chart_rounded),
           label: 'التقارير',
         ),
       ],
+    );
+  }
+}
+
+class _NavigationAssetIcon extends StatelessWidget {
+  const _NavigationAssetIcon(this.assetName);
+
+  final String assetName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      assetName,
+      width: 24,
+      height: 24,
+      filterQuality: FilterQuality.high,
     );
   }
 }
