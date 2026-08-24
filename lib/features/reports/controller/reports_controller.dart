@@ -11,7 +11,7 @@ class ReportsController extends ChangeNotifier {
 
   final List<InventoryMovement> _movements;
   MovementType? _selectedType;
-  ReportPeriod _period = ReportPeriod.last30Days;
+  ReportPeriod _period = ReportPeriod.all;
   DateTimeRange? _dateRange;
   String? _project;
   String? _category;
@@ -21,6 +21,17 @@ class ReportsController extends ChangeNotifier {
   DateTimeRange? get dateRange => _dateRange;
   String? get project => _project;
   String? get category => _category;
+  bool get hasActiveFilters =>
+      _period != ReportPeriod.all ||
+      _selectedType != null ||
+      _project != null ||
+      _category != null;
+
+  int get activeFilterCount =>
+      (_period != ReportPeriod.all ? 1 : 0) +
+      (_selectedType != null ? 1 : 0) +
+      (_project != null ? 1 : 0) +
+      (_category != null ? 1 : 0);
   ReportSnapshot get snapshot =>
       const ReportSnapshot(total: 128, issues: 74, additions: 39);
 
@@ -102,6 +113,16 @@ class ReportsController extends ChangeNotifier {
   void selectCategory(String? category) {
     if (_category == category) return;
     _category = category;
+    notifyListeners();
+  }
+
+  void clearFilters() {
+    if (!hasActiveFilters) return;
+    _selectedType = null;
+    _period = ReportPeriod.all;
+    _dateRange = null;
+    _project = null;
+    _category = null;
     notifyListeners();
   }
 }

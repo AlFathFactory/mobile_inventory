@@ -42,9 +42,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
 
-    await tester.tap(find.byType(DropdownButton<ReportPeriod>));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('تحديد التاريخ').last);
+    await tester.tap(find.byKey(const Key('report-date-filter')));
     await tester.pumpAndSettle();
 
     expect(find.byType(ReportDateRangePicker), findsOneWidget);

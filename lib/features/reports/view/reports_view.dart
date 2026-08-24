@@ -25,34 +25,6 @@ class ReportsView extends StatelessWidget {
               const SizedBox(height: 14),
               ReportFilters(controller: controller),
               const SizedBox(height: 14),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: SummaryCard(
-                      label: 'إجمالي الحركات',
-                      value: '${snapshot.total}',
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: SummaryCard(
-                      label: 'صرف',
-                      value: '${snapshot.issues}',
-                      valueColor: AppColors.accent,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: SummaryCard(
-                      label: 'إضافة',
-                      value: '${snapshot.additions}',
-                      valueColor: AppColors.safe,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
               Expanded(
                 child: movements.isEmpty
                     ? const SingleChildScrollView(
