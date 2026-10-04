@@ -1,5 +1,5 @@
 import 'package:el_fateh/features/dashboard/model/dashboard_models.dart';
-import 'package:el_fateh/features/dashboard/widgets/CategorySummaryCard.dart';
+import 'package:el_fateh/features/dashboard/widgets/category_summary_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -21,7 +21,7 @@ void main() {
             body: Center(
               child: SizedBox(
                 width: 140,
-                height: 70,
+                height: 122,
                 child: CategorySummaryCard(summary: summary, onTap: () {}),
               ),
             ),

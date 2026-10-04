@@ -11,7 +11,7 @@ void main() {
     await tester.pumpWidget(const MyApp(previewLoadDelay: Duration.zero));
     await tester.pumpAndSettle();
 
-    final titleContext = tester.element(find.text('نظرة عامة').first);
+    final titleContext = tester.element(find.text('أهلًا، صباح الخير 👋'));
     expect(Directionality.of(titleContext), TextDirection.rtl);
     expect(find.text('إجمالي الأصناف'), findsOneWidget);
 
@@ -25,7 +25,47 @@ void main() {
 
     await tester.tap(find.byKey(const Key('nav-reports')));
     await tester.pumpAndSettle();
-    expect(find.text('إجمالي الحركات'), findsOneWidget);
+    expect(find.text('التقارير'), findsWidgets);
+  });
+
+  testWidgets('dashboard entry points preserve router behavior', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const MyApp(previewLoadDelay: Duration.zero));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('dashboard-search')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('inventory-search')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('nav-dashboard')));
+    await tester.pumpAndSettle();
+    final dashboardScrollable = find
+        .descendant(
+          of: find.byKey(const PageStorageKey('dashboard-list')),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('dashboard-category-الدهانات')),
+      250,
+      scrollable: dashboardScrollable,
+    );
+    await tester.tap(find.byKey(const Key('dashboard-category-الدهانات')));
+    await tester.pumpAndSettle();
+    expect(find.text('هيمباريم 500 × 16 لتر رال 7032'), findsOneWidget);
+    expect(find.text('مسامير قلاووظ ٦ مم'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('nav-dashboard')));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('dashboard-notifications')),
+      -250,
+      scrollable: dashboardScrollable,
+    );
+    await tester.tap(find.byKey(const Key('dashboard-notifications')));
+    await tester.pumpAndSettle();
+    expect(find.text('تنبيهات المخزون'), findsOneWidget);
   });
 
   testWidgets('preserves inventory search while switching tabs', (

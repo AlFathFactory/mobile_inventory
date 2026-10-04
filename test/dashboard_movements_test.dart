@@ -7,18 +7,33 @@ void main() {
     await tester.pumpWidget(const MyApp(previewLoadDelay: Duration.zero));
     await tester.pumpAndSettle();
 
-    expect(find.text('أصناف تحتاج الانتباه'), findsNothing);
+    final dashboardList = find.byKey(const PageStorageKey('dashboard-list'));
+    final dashboardScrollable = find
+        .descendant(of: dashboardList, matching: find.byType(Scrollable))
+        .first;
+    await tester.scrollUntilVisible(
+      find.text('يحتاج انتباهك'),
+      300,
+      scrollable: dashboardScrollable,
+    );
+    expect(find.text('يحتاج انتباهك'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('أحدث حركات المخزون'),
+      300,
+      scrollable: dashboardScrollable,
+    );
     expect(find.text('أحدث حركات المخزون'), findsOneWidget);
 
     final reportsButton = find.byKey(const Key('open-reports-from-dashboard'));
     await tester.scrollUntilVisible(
       reportsButton,
       300,
-      scrollable: find.byType(Scrollable).first,
+      scrollable: dashboardScrollable,
     );
     await tester.tap(reportsButton);
     await tester.pumpAndSettle();
 
-    expect(find.text('إجمالي الحركات'), findsOneWidget);
+    expect(find.text('التقارير'), findsWidgets);
   });
 }

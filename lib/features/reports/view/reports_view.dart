@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_components.dart';
 import '../../inventory/widgets/movement_card.dart';
 import '../controller/reports_controller.dart';
@@ -18,7 +17,6 @@ class ReportsView extends StatelessWidget {
         listenable: controller,
         builder: (context, child) {
           final movements = controller.visibleMovements;
-          final snapshot = controller.snapshot;
           return Column(
             children: [
               const PageHeader(title: 'التقارير'),

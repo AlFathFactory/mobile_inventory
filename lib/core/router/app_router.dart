@@ -49,6 +49,7 @@ class AppRouter {
                 builder: (context, state) => DashboardView(
                   metrics: PreviewData.dashboardMetrics,
                   categories: PreviewData.categories,
+                  attentionItems: PreviewData.alertItems,
                   recentMovements: PreviewData.reportMovements
                       .take(3)
                       .toList(growable: false),

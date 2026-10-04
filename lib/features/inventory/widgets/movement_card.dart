@@ -234,7 +234,14 @@ class _MetaItem extends StatelessWidget {
       children: [
         Icon(icon, size: 13, color: AppColors.neutral500),
         const SizedBox(width: 4),
-        Text(label, style: AppTextStyles.caption),
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.caption,
+          ),
+        ),
       ],
     );
   }

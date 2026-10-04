@@ -11,6 +11,12 @@ abstract final class AppColors {
   static const accentSoft = Color(0xFFCBEFFF);
   static const accentVerySoft = Color(0xFFE9F8FF);
 
+  static const warmSurface = Color(0xFFFFFBF6);
+  static const peachSoft = Color(0xFFFFE9DA);
+  static const peach = Color(0xFFB65320);
+  static const lavenderSoft = Color(0xFFF0EAFE);
+  static const lavender = Color(0xFF6B4DB2);
+
   static const neutral300 = Color(0xFFD7D3D3);
   static const neutral400 = Color(0xFFBAB6B6);
   static const neutral500 = Color(0xFF9B9797);
