@@ -168,7 +168,8 @@ void main() {
     await tester.tap(find.byKey(const Key('open-movement-history')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('movement-history-list')), findsOneWidget);
-    expect(find.text('صرف'), findsOneWidget);
+    expect(find.text('صرف'), findsWidgets);
+    expect(find.text('ملخص السجل'), findsOneWidget);
   });
 
   testWidgets('enables the app-level skeleton before preview data loads', (
