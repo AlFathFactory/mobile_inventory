@@ -138,7 +138,7 @@ This codebase is feature-first, but `core` is not a completely feature-independe
 
 - `dashboard` reuses inventory's `InventoryItem` and `InventoryItemCard`.
 - `alerts` reuses inventory's item model and item card.
-- `reports` reuses inventory's movement model and `MovementCard`.
+- `reports` reuses inventory's movement model plus the shared timeline widgets (`MovementRail`, `MovementMetadata`, `QuantityTransition`).
 - `core/theme/status_visuals.dart` maps inventory enums to shared visuals.
 - `core/widgets/status_badge.dart` displays inventory `StockStatus`.
 - `core/data/preview_data.dart` constructs dashboard and inventory feature models.
@@ -262,7 +262,7 @@ Inventory is the central domain feature and supplies models/widgets to other fea
 - `InventoryView` owns only its `TextEditingController`; its value is initialized from the long-lived inventory controller.
 - `InventoryFilterSheet` edits local draft sets and commits only when Apply is pressed.
 - `InventoryItemCard` is reused by Dashboard and Alerts.
-- `MovementCard` and `QuantityTransition` are reused by Item Details, History, and Reports.
+- The movement timeline system (`MovementRail`, `MovementTimelineItem` / `ReportsTimelineItem`, `MovementMetadata`, `QuantityTransition`) is shared by the Item Details preview, History, and Reports.
 
 All inventory filters combine with logical AND. Values inside one multi-select group combine with logical OR. `clearFilters()` preserves search by default; pass `includeQuery: true` to clear it too.
 
@@ -280,7 +280,7 @@ The alert summary counts are currently fixed preview totals and intentionally la
 - `ReportsController` filters preview movements by period, movement type, project, and category.
 - `ReportPeriod` and `ReportSnapshot` define filter and summary display data.
 - `ReportFilters` combines generic dropdowns with a movement-type chip bar.
-- `ReportsView` listens to the controller and reuses inventory's `MovementCard`.
+- `ReportsView` listens to the controller and renders `ReportsMovementList`, built from the shared timeline widgets.
 
 Report filters also combine with logical AND. A null movement type/project/category means “all.”
 

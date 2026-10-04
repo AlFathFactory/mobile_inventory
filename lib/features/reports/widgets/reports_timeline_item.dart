@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/status_visuals.dart';
-import '../model/inventory_movement.dart';
-import 'movement_metadata.dart';
-import 'movement_rail.dart';
-import 'quantity_transition.dart';
+import '../../inventory/model/inventory_movement.dart';
+import '../../inventory/widgets/movement_metadata.dart';
+import '../../inventory/widgets/movement_rail.dart';
+import '../../inventory/widgets/quantity_transition.dart';
 
-/// One entry of the movement history timeline.
+/// Reports flavor of the shared movement timeline language.
 ///
-/// Shows type, signed quantity, date, resulting balance and only the
-/// metadata that is actually available.
-class MovementTimelineItem extends StatelessWidget {
-  const MovementTimelineItem({
+/// Same rail, metadata and balance treatment as Movement History, with
+/// the item identity on top since the list spans multiple items.
+class ReportsTimelineItem extends StatelessWidget {
+  const ReportsTimelineItem({
     required this.movement,
     required this.showConnector,
     super.key,
@@ -51,8 +51,8 @@ class MovementTimelineItem extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          movement.type.label,
-                          maxLines: 1,
+                          movement.itemName,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: AppTextStyles.cardTitle,
                         ),
@@ -71,7 +71,32 @@ class MovementTimelineItem extends StatelessWidget {
                   const SizedBox(height: 2),
                   Directionality(
                     textDirection: TextDirection.ltr,
-                    child: Text(_date, style: AppTextStyles.caption),
+                    child: Text(
+                      movement.itemCode,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.code,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Text(
+                        movement.type.label,
+                        style: AppTextStyles.caption.copyWith(
+                          color: movement.type.color,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 5),
+                        child: Text('·', style: AppTextStyles.caption),
+                      ),
+                      Directionality(
+                        textDirection: TextDirection.ltr,
+                        child: Text(_date, style: AppTextStyles.caption),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 7),
                   QuantityTransition(
