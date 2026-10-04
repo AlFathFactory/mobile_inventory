@@ -150,15 +150,21 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('تفاصيل الصنف'), findsOneWidget);
     expect(find.text('شركة يوتن مصر'), findsWidgets);
+    expect(find.text('الرصيد الحالي'), findsOneWidget);
+    expect(find.text('معلومات الصنف'), findsOneWidget);
 
-    await tester.scrollUntilVisible(
-      find.byKey(const Key('open-movement-history')),
-      280,
-      scrollable: find.descendant(
-        of: find.byKey(const Key('item-details-list')),
-        matching: find.byType(Scrollable),
-      ),
+    final detailsScrollable = find.descendant(
+      of: find.byKey(const Key('item-details-list')),
+      matching: find.byType(Scrollable),
     );
+    final detailsPosition = tester
+        .state<ScrollableState>(detailsScrollable)
+        .position;
+    detailsPosition.jumpTo(detailsPosition.maxScrollExtent);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('item-notes-section')), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const Key('open-movement-history')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('open-movement-history')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('movement-history-list')), findsOneWidget);
