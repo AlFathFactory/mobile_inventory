@@ -43,14 +43,16 @@ void main() {
     final dashboardScrollable = find
         .descendant(
           of: find.byKey(const PageStorageKey('dashboard-list')),
-          matching: find.byType(Scrollable),
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is Scrollable &&
+                widget.axisDirection == AxisDirection.down,
+          ),
         )
         .first;
-    await tester.scrollUntilVisible(
-      find.byKey(const Key('dashboard-category-الدهانات')),
-      250,
-      scrollable: dashboardScrollable,
-    );
+    tester.state<ScrollableState>(dashboardScrollable).position.jumpTo(90);
+    await tester.pump();
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('dashboard-category-الدهانات')));
     await tester.pumpAndSettle();
     expect(find.text('هيمباريم 500 × 16 لتر رال 7032'), findsOneWidget);
@@ -58,11 +60,8 @@ void main() {
 
     await tester.tap(find.byKey(const Key('nav-dashboard')));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.byKey(const Key('dashboard-notifications')),
-      -250,
-      scrollable: dashboardScrollable,
-    );
+    tester.state<ScrollableState>(dashboardScrollable).position.jumpTo(0);
+    await tester.pump();
     await tester.tap(find.byKey(const Key('dashboard-notifications')));
     await tester.pumpAndSettle();
     expect(find.text('تنبيهات المخزون'), findsOneWidget);
@@ -92,6 +91,27 @@ void main() {
       find.byKey(const Key('inventory-search')),
     );
     expect(search.controller?.text, 'GS-OX-004');
+  });
+
+  testWidgets('inventory status and category browsing filter the catalogue', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const MyApp(previewLoadDelay: Duration.zero));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('nav-inventory')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('inventory-status-نفد')));
+    await tester.pumpAndSettle();
+    expect(find.text('اسطوانة أكسجين صناعي'), findsOneWidget);
+    expect(find.text('هيمباريم 500 × 16 لتر رال 7032'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('inventory-status-الكل')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('inventory-category-الدهانات')));
+    await tester.pumpAndSettle();
+    expect(find.text('هيمباريم 500 × 16 لتر رال 7032'), findsOneWidget);
+    expect(find.text('مسامير قلاووظ ٦ مم'), findsNothing);
   });
 
   testWidgets('applies the out-of-stock inventory filter sheet', (

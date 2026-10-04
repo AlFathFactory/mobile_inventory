@@ -63,6 +63,19 @@ void main() {
       expect(controller.quickStatus, isNull);
       expect(controller.visibleItems.single.code, 'PA-GN-059');
     });
+
+    test('category browsing preserves other advanced filters', () {
+      controller.applyFilters(const InventoryFilter(projects: {'AMSET 2'}));
+      controller.setBrowseCategory('مخزن الكهرباء');
+
+      expect(controller.filter.projects, {'AMSET 2'});
+      expect(controller.filter.categories, {'مخزن الكهرباء'});
+      expect(controller.visibleItems.single.code, 'EL-CB-025');
+
+      controller.setBrowseCategory(null);
+      expect(controller.filter.categories, isEmpty);
+      expect(controller.filter.projects, {'AMSET 2'});
+    });
   });
 
   test('AlertsController filters the preview alerts', () {

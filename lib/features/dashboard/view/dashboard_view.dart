@@ -6,7 +6,6 @@ import '../../inventory/model/inventory_movement.dart';
 import '../model/dashboard_models.dart';
 import '../widgets/dashboard_categories.dart';
 import '../widgets/dashboard_header.dart';
-import '../widgets/dashboard_quick_actions.dart';
 import '../widgets/dashboard_search.dart';
 import '../widgets/inventory_overview.dart';
 import '../widgets/needs_attention_section.dart';

@@ -33,31 +33,33 @@ class InventoryController extends ChangeNotifier {
         ..sort();
 
   List<InventoryItem> get visibleItems {
-    final normalizedQuery = _query.trim().toLowerCase();
     return _items
-        .where((item) {
-          final matchesQuery =
-              normalizedQuery.isEmpty ||
-              item.name.toLowerCase().contains(normalizedQuery) ||
-              item.code.toLowerCase().contains(normalizedQuery);
-          final matchesQuick =
-              _quickStatus == null || item.status == _quickStatus;
-          final matchesStatus =
-              _filter.statuses.isEmpty ||
-              _filter.statuses.contains(item.status);
-          final matchesCategory =
-              _filter.categories.isEmpty ||
-              _filter.categories.contains(item.category);
-          final matchesProject =
-              _filter.projects.isEmpty ||
-              _filter.projects.contains(item.project);
-          return matchesQuery &&
-              matchesQuick &&
-              matchesStatus &&
-              matchesCategory &&
-              matchesProject;
-        })
+        .where((item) => _matches(item, _filter))
         .toList(growable: false);
+  }
+
+  int resultCountFor(InventoryFilter filter) {
+    return _items.where((item) => _matches(item, filter)).length;
+  }
+
+  bool _matches(InventoryItem item, InventoryFilter filter) {
+    final normalizedQuery = _query.trim().toLowerCase();
+    final matchesQuery =
+        normalizedQuery.isEmpty ||
+        item.name.toLowerCase().contains(normalizedQuery) ||
+        item.code.toLowerCase().contains(normalizedQuery);
+    final matchesQuick = _quickStatus == null || item.status == _quickStatus;
+    final matchesStatus =
+        filter.statuses.isEmpty || filter.statuses.contains(item.status);
+    final matchesCategory =
+        filter.categories.isEmpty || filter.categories.contains(item.category);
+    final matchesProject =
+        filter.projects.isEmpty || filter.projects.contains(item.project);
+    return matchesQuery &&
+        matchesQuick &&
+        matchesStatus &&
+        matchesCategory &&
+        matchesProject;
   }
 
   Future<void> loadPreviewData({
@@ -93,6 +95,17 @@ class InventoryController extends ChangeNotifier {
   void filterByCategory(String category) {
     _quickStatus = null;
     _filter = InventoryFilter(categories: {category});
+    notifyListeners();
+  }
+
+  void setBrowseCategory(String? category) {
+    final categories = category == null ? const <String>{} : {category};
+    if (setEquals(_filter.categories, categories)) return;
+    _filter = InventoryFilter(
+      statuses: _filter.statuses,
+      categories: categories,
+      projects: _filter.projects,
+    );
     notifyListeners();
   }
 

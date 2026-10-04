@@ -15,6 +15,10 @@ Future<void> showInventoryFilterSheet(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
+    clipBehavior: Clip.antiAlias,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+    ),
     builder: (context) => InventoryFilterSheet(controller: controller),
   );
 }
@@ -39,29 +43,7 @@ class _InventoryFilterSheetState extends State<InventoryFilterSheet> {
     projects: _projects,
   );
 
-  int get _resultCount {
-    final query = widget.controller.query.trim().toLowerCase();
-    return widget.controller.allItems.where((item) {
-      final matchesQuery =
-          query.isEmpty ||
-          item.name.toLowerCase().contains(query) ||
-          item.code.toLowerCase().contains(query);
-      final matchesQuick =
-          widget.controller.quickStatus == null ||
-          item.status == widget.controller.quickStatus;
-      final matchesStatus =
-          _statuses.isEmpty || _statuses.contains(item.status);
-      final matchesCategory =
-          _categories.isEmpty || _categories.contains(item.category);
-      final matchesProject =
-          _projects.isEmpty || _projects.contains(item.project);
-      return matchesQuery &&
-          matchesQuick &&
-          matchesStatus &&
-          matchesCategory &&
-          matchesProject;
-    }).length;
-  }
+  int get _resultCount => widget.controller.resultCountFor(_draft);
 
   void _toggle<T>(Set<T> values, T value, bool selected) {
     setState(() => selected ? values.add(value) : values.remove(value));
@@ -74,11 +56,25 @@ class _InventoryFilterSheetState extends State<InventoryFilterSheet> {
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+            padding: const EdgeInsetsDirectional.fromSTEB(20, 0, 12, 12),
             child: Row(
               children: [
-                const Expanded(
-                  child: Text('الفلترة', style: AppTextStyles.sectionTitle),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'تصفية المخزون',
+                        style: AppTextStyles.sectionTitle,
+                      ),
+                      Text(
+                        'اختر ما يساعدك للوصول إلى الصنف',
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.neutral600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 TextButton(
                   onPressed: () => setState(() {
@@ -91,7 +87,6 @@ class _InventoryFilterSheetState extends State<InventoryFilterSheet> {
               ],
             ),
           ),
-          const Divider(height: 1),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.all(20),
@@ -128,7 +123,13 @@ class _InventoryFilterSheetState extends State<InventoryFilterSheet> {
           DecoratedBox(
             decoration: const BoxDecoration(
               color: AppColors.surface,
-              border: Border(top: BorderSide(color: AppColors.divider)),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.shadow,
+                  blurRadius: 18,
+                  offset: Offset(0, -4),
+                ),
+              ],
             ),
             child: SafeArea(
               top: false,

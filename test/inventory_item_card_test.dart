@@ -30,8 +30,11 @@ void main() {
           child: Scaffold(
             body: SafeArea(
               child: Padding(
-                padding: EdgeInsets.all(16),
-                child: InventoryItemCard(item: item),
+                padding: EdgeInsets.all(20),
+                child: InventoryItemCard(
+                  item: item,
+                  showCatalogueContext: true,
+                ),
               ),
             ),
           ),
@@ -43,8 +46,8 @@ void main() {
     expect(find.text(item.name), findsOneWidget);
     expect(find.text(item.code), findsOneWidget);
     expect(find.text('${item.quantity}'), findsOneWidget);
-    expect(find.text(item.category), findsNothing);
-    expect(find.text(item.project), findsNothing);
+    expect(find.text(item.category), findsOneWidget);
+    expect(find.text(item.project), findsOneWidget);
     expect(find.text(item.supplier!), findsNothing);
     expect(find.text(item.expiry!), findsNothing);
   });

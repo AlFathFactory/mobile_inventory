@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_text_styles.dart';
-import '../../../core/widgets/app_components.dart';
+import '../../../core/widgets/responsive_page.dart';
 import '../controller/inventory_controller.dart';
 import '../model/inventory_item.dart';
+import '../widgets/inventory_category_bar.dart';
+import '../widgets/inventory_empty_state.dart';
 import '../widgets/inventory_filter_sheet.dart';
+import '../widgets/inventory_header.dart';
 import '../widgets/inventory_item_card.dart';
+import '../widgets/inventory_results_header.dart';
+import '../widgets/inventory_search_toolbar.dart';
+import '../widgets/inventory_status_filters.dart';
 
 class InventoryView extends StatefulWidget {
   const InventoryView({
@@ -33,6 +37,11 @@ class _InventoryViewState extends State<InventoryView> {
     super.dispose();
   }
 
+  void _clearSearch() {
+    _searchController.clear();
+    widget.controller.setQuery('');
+  }
+
   @override
   Widget build(BuildContext context) {
     return ResponsivePage(
@@ -44,77 +53,57 @@ class _InventoryViewState extends State<InventoryView> {
               ? widget.controller.allItems.take(5).toList(growable: false)
               : widget.controller.visibleItems;
           return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const PageHeader(title: 'المخزون'),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      key: const Key('inventory-search'),
-                      controller: _searchController,
-                      onChanged: widget.controller.setQuery,
-                      textInputAction: TextInputAction.search,
-                      decoration: const InputDecoration(
-                        hintText: 'ابحث باسم الصنف أو الكود',
-                        prefixIcon: Icon(Icons.search_rounded),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 9),
-                  Badge(
-                    isLabelVisible: !widget.controller.filter.isEmpty,
-                    label: Text('${widget.controller.filter.selectionCount}'),
-                    child: IconButton.outlined(
-                      key: const Key('open-inventory-filters'),
-                      onPressed: () =>
-                          showInventoryFilterSheet(context, widget.controller),
-                      icon: const Icon(Icons.tune_rounded),
-                      tooltip: 'فلترة',
-                    ),
-                  ),
-                ],
+              InventoryHeader(totalCount: widget.controller.allItems.length),
+              const SizedBox(height: 16),
+              InventorySearchToolbar(
+                controller: _searchController,
+                showClear: widget.controller.query.isNotEmpty,
+                filterCount: widget.controller.filter.selectionCount,
+                onChanged: widget.controller.setQuery,
+                onClear: _clearSearch,
+                onFilterTap: () =>
+                    showInventoryFilterSheet(context, widget.controller),
               ),
-              const SizedBox(height: 11),
-              FilterChipBar<StockStatus?>(
-                options: const [
-                  FilterChipOption(value: null, label: 'الكل'),
-                  FilterChipOption(value: StockStatus.safe, label: 'آمن'),
-                  FilterChipOption(value: StockStatus.low, label: 'منخفض'),
-                ],
+              const SizedBox(height: 13),
+              InventoryStatusFilters(
                 selected: widget.controller.quickStatus,
                 onSelected: widget.controller.setQuickStatus,
               ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Text('${items.length} أصناف', style: AppTextStyles.label),
-                  const Spacer(),
-                  const Icon(
-                    Icons.swap_vert_rounded,
-                    size: 16,
-                    color: AppColors.neutral500,
-                  ),
-                  const SizedBox(width: 3),
-                  const Text('مرتبة: آخر حركة', style: AppTextStyles.caption),
-                ],
+              const SizedBox(height: 15),
+              InventoryCategoryBar(
+                categories: widget.controller.categories,
+                selectedCategories: widget.controller.filter.categories,
+                onSelected: widget.controller.setBrowseCategory,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 15),
+              InventoryResultsHeader(
+                resultCount: items.length,
+                hasFilters:
+                    widget.controller.quickStatus != null ||
+                    !widget.controller.filter.isEmpty,
+              ),
+              const SizedBox(height: 9),
               Expanded(
                 child: items.isEmpty
-                    ? const SingleChildScrollView(
-                        child: EmptyState(title: 'لا توجد أصناف مطابقة'),
+                    ? SingleChildScrollView(
+                        child: InventoryEmptyState(
+                          query: widget.controller.query,
+                        ),
                       )
                     : ListView.separated(
                         key: const PageStorageKey('inventory-list'),
+                        padding: const EdgeInsets.only(bottom: 12),
                         itemCount: items.length,
                         separatorBuilder: (context, index) =>
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 9),
                         itemBuilder: (context, index) {
                           final item = items[index];
                           return InventoryItemCard(
                             key: ValueKey(item.code),
                             item: item,
+                            showCatalogueContext: true,
                             onTap: () => widget.onOpenItem(item),
                           );
                         },
