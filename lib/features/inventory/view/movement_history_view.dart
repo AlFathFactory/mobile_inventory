@@ -14,16 +14,26 @@ class MovementHistoryView extends StatelessWidget {
   const MovementHistoryView({
     required this.item,
     required this.movements,
+    this.onBack,
     super.key,
   });
 
   final InventoryItem item;
   final List<InventoryMovement> movements;
+  final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('سجل الحركات')),
+      appBar: AppBar(
+        title: const Text('سجل الحركات'),
+        leading: onBack == null
+            ? null
+            : BackButton(
+                key: const Key('movement-history-back'),
+                onPressed: onBack,
+              ),
+      ),
       body: SafeArea(
         top: false,
         child: ResponsivePage(

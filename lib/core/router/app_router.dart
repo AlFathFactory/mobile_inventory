@@ -29,6 +29,7 @@ class AppRouter {
   );
   final alertsController = AlertsController(PreviewData.alertItems);
   final reportsController = ReportsController(PreviewData.reportMovements);
+  bool _isOpeningItem = false;
 
   late final GoRouter router = GoRouter(
     navigatorKey: rootNavigatorKey,
@@ -53,14 +54,8 @@ class AppRouter {
                   recentMovements: PreviewData.reportMovements
                       .take(3)
                       .toList(growable: false),
-                  onShowInventory: (category) {
-                    if (category == null) {
-                      inventoryController.clearFilters();
-                    } else {
-                      inventoryController.filterByCategory(category);
-                    }
-                    context.goNamed(AppRouteNames.inventory);
-                  },
+                  onShowInventory: (category) =>
+                      _showInventory(context, category),
                   onShowAlerts: () => context.goNamed(AppRouteNames.alerts),
                   onShowReports: () => context.goNamed(AppRouteNames.reports),
                 ),
@@ -87,6 +82,8 @@ class AppRouter {
                       return ItemDetailsView(
                         item: item,
                         movements: PreviewData.movementsFor(item.code),
+                        onBack: () =>
+                            _closeItemDetails(context, state.extra as String?),
                       );
                     },
                     routes: [
@@ -100,6 +97,7 @@ class AppRouter {
                           return MovementHistoryView(
                             item: item,
                             movements: PreviewData.movementsFor(item.code),
+                            onBack: () => _closeMovementHistory(context, item),
                           );
                         },
                       ),
@@ -145,7 +143,57 @@ class AppRouter {
   }
 
   void _openItem(BuildContext context, InventoryItem item) {
-    context.pushNamed(
+    // The detail page is presented above the selected tab. Keep one push in
+    // flight so a rapid double tap cannot duplicate it on the root navigator.
+    if (_isOpeningItem || _findItem(item.code) == null) return;
+
+    FocusManager.instance.primaryFocus?.unfocus();
+    _isOpeningItem = true;
+    context
+        .pushNamed<void>(
+          AppRouteNames.itemDetails,
+          pathParameters: {'code': item.code},
+          extra: _originRouteFor(context),
+        )
+        .then<void>(
+          (_) => _isOpeningItem = false,
+          onError: (_, _) => _isOpeningItem = false,
+        );
+  }
+
+  void _showInventory(BuildContext context, String? category) {
+    // Dashboard data is local preview data, but tolerate a stale category if
+    // this entry point is ever fed by a route or refreshed data source.
+    if (category != null && inventoryController.categories.contains(category)) {
+      inventoryController.filterByCategory(category);
+    } else {
+      inventoryController.clearFilters();
+    }
+    context.goNamed(AppRouteNames.inventory);
+  }
+
+  String _originRouteFor(BuildContext context) {
+    return switch (GoRouterState.of(context).matchedLocation) {
+      AppRoutePaths.alerts => AppRouteNames.alerts,
+      AppRoutePaths.reports => AppRouteNames.reports,
+      _ => AppRouteNames.inventory,
+    };
+  }
+
+  void _closeItemDetails(BuildContext context, String? fallbackRoute) {
+    if (router.canPop()) {
+      router.pop();
+      return;
+    }
+    context.goNamed(fallbackRoute ?? AppRouteNames.inventory);
+  }
+
+  void _closeMovementHistory(BuildContext context, InventoryItem item) {
+    if (router.canPop()) {
+      router.pop();
+      return;
+    }
+    context.goNamed(
       AppRouteNames.itemDetails,
       pathParameters: {'code': item.code},
     );
