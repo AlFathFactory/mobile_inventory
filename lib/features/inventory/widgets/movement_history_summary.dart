@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/status_visuals.dart';
+import '../../../core/widgets/app_card.dart';
 import '../model/inventory_movement.dart';
 
 /// Lightweight single-surface summary: total plus per-type counts.
@@ -50,47 +51,41 @@ class MovementHistorySummary extends StatelessWidget {
       ),
     ].where((stat) => stat.count > 0).toList(growable: false);
 
-    return DecoratedBox(
+    return AppCard(
       key: const Key('movement-history-summary'),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'ملخص السجل',
-                    style: AppTextStyles.label.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.text,
-                    ),
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'ملخص السجل',
+                  style: AppTextStyles.label.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.text,
                   ),
                 ),
-                Text(
-                  '${movements.length}',
-                  textDirection: TextDirection.ltr,
-                  style: AppTextStyles.caption,
-                ),
-                const SizedBox(width: 4),
-                const Text('حركات', style: AppTextStyles.caption),
-              ],
-            ),
-            if (stats.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 7,
-                runSpacing: 7,
-                children: [for (final stat in stats) _StatPill(stat: stat)],
               ),
+              Text(
+                '${movements.length}',
+                textDirection: TextDirection.ltr,
+                style: AppTextStyles.caption,
+              ),
+              const SizedBox(width: 4),
+              const Text('حركات', style: AppTextStyles.caption),
             ],
+          ),
+          if (stats.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 7,
+              runSpacing: 7,
+              children: [for (final stat in stats) _StatPill(stat: stat)],
+            ),
           ],
-        ),
+        ],
       ),
     );
   }

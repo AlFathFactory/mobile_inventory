@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_routes.dart';
+import '../../../core/theme/app_dimensions.dart';
 import '../../../core/widgets/responsive_page.dart';
 import '../model/inventory_item.dart';
 import '../model/inventory_movement.dart';
@@ -33,15 +34,15 @@ class ItemDetailsView extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 16),
             children: [
               ItemDetailsHeader(item: item),
-              const SizedBox(height: 18),
+              const SizedBox(height: AppDimensions.space20),
               ItemStockOverview(item: item),
-              const SizedBox(height: 24),
+              const SizedBox(height: AppDimensions.space24),
               ItemInformationSection(item: item),
               if (item.notes case final notes?) ...[
-                const SizedBox(height: 20),
+                const SizedBox(height: AppDimensions.space20),
                 ItemNotesSection(notes: notes),
               ],
-              const SizedBox(height: 24),
+              const SizedBox(height: AppDimensions.space24),
               ItemRecentMovements(
                 movements: movements.take(2).toList(growable: false),
                 onViewAll: movements.isEmpty

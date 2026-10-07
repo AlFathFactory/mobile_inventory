@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_dimensions.dart';
+import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/responsive_page.dart';
 import '../model/inventory_item.dart';
 import '../model/inventory_movement.dart';
@@ -32,53 +33,28 @@ class MovementHistoryView extends StatelessWidget {
             children: [
               MovementHistoryHeader(item: item),
               if (movements.isNotEmpty) ...[
-                const SizedBox(height: 16),
+                const SizedBox(height: AppDimensions.space16),
                 MovementHistorySummary(movements: movements),
               ],
-              const SizedBox(height: 16),
+              const SizedBox(height: AppDimensions.space16),
               if (movements.isEmpty)
-                const DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.all(Radius.circular(22)),
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.all(20),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.history_toggle_off_rounded,
-                          color: AppColors.neutral500,
-                        ),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'لا توجد حركات مسجلة لهذا الصنف.',
-                            style: AppTextStyles.body,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                const EmptyState(
+                  title: 'لا توجد حركات مسجلة',
+                  message: 'لا توجد حركات مسجلة لهذا الصنف.',
+                  icon: Icons.history_toggle_off_rounded,
                 )
               else
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(22),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
-                      children: [
-                        for (var index = 0; index < movements.length; index++)
-                          MovementTimelineItem(
-                            key: ValueKey(movements[index].id),
-                            movement: movements[index],
-                            showConnector: index != movements.length - 1,
-                          ),
-                      ],
-                    ),
+                AppCard(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    children: [
+                      for (var index = 0; index < movements.length; index++)
+                        MovementTimelineItem(
+                          key: ValueKey(movements[index].id),
+                          movement: movements[index],
+                          showConnector: index != movements.length - 1,
+                        ),
+                    ],
                   ),
                 ),
             ],

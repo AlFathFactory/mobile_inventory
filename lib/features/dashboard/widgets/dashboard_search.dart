@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_text_styles.dart';
 
 class DashboardSearch extends StatelessWidget {
@@ -12,11 +13,11 @@ class DashboardSearch extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppColors.surface,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(AppDimensions.radiusControl),
       child: InkWell(
         key: const Key('dashboard-search'),
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusControl),
         child: Padding(
           padding: const EdgeInsetsDirectional.fromSTEB(16, 13, 10, 13),
           child: Row(
@@ -31,14 +32,16 @@ class DashboardSearch extends StatelessWidget {
                 child: Text(
                   'ابحث عن صنف أو كود...',
                   style: AppTextStyles.body.copyWith(
-                    color: AppColors.neutral500,
+                    color: AppColors.neutral600,
                   ),
                 ),
               ),
               DecoratedBox(
                 decoration: BoxDecoration(
                   color: AppColors.accentVerySoft,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(
+                    AppDimensions.radiusSmall,
+                  ),
                 ),
                 child: const SizedBox.square(
                   dimension: 34,

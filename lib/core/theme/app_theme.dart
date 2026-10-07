@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 import 'app_colors.dart';
+import 'app_dimensions.dart';
 import 'app_text_styles.dart';
 
 abstract final class AppTheme {
@@ -29,9 +30,10 @@ abstract final class AppTheme {
       scaffoldBackgroundColor: AppColors.background,
       dividerColor: AppColors.divider,
       textTheme: const TextTheme(
-        headlineSmall: AppTextStyles.pageTitle,
-        titleLarge: AppTextStyles.sectionTitle,
-        titleMedium: AppTextStyles.cardTitle,
+        headlineSmall: AppTextStyles.screenTitle,
+        titleLarge: AppTextStyles.pageTitle,
+        titleMedium: AppTextStyles.sectionTitle,
+        titleSmall: AppTextStyles.cardTitle,
         bodyMedium: AppTextStyles.body,
         labelLarge: AppTextStyles.label,
         bodySmall: AppTextStyles.caption,
@@ -43,26 +45,26 @@ abstract final class AppTheme {
         scrolledUnderElevation: 0,
         centerTitle: false,
         systemOverlayStyle: SystemUiOverlayStyle.dark,
-        titleTextStyle: AppTextStyles.sectionTitle,
+        titleTextStyle: AppTextStyles.pageTitle,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.surface,
-        hintStyle: AppTextStyles.body.copyWith(color: AppColors.neutral500),
+        hintStyle: AppTextStyles.body.copyWith(color: AppColors.neutral600),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 14,
           vertical: 12,
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(9),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusControl),
           borderSide: const BorderSide(color: AppColors.divider),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(9),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusControl),
           borderSide: const BorderSide(color: AppColors.divider),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(9),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusControl),
           borderSide: const BorderSide(color: AppColors.accent, width: 1.4),
         ),
       ),
@@ -70,7 +72,9 @@ abstract final class AppTheme {
         backgroundColor: AppColors.surface,
         selectedColor: AppColors.accent,
         side: const BorderSide(color: AppColors.divider),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusControl),
+        ),
         labelStyle: AppTextStyles.label,
         secondaryLabelStyle: AppTextStyles.label.copyWith(color: Colors.white),
         padding: const EdgeInsets.symmetric(horizontal: 5),
@@ -79,6 +83,37 @@ abstract final class AppTheme {
         backgroundColor: AppColors.surface,
         surfaceTintColor: Colors.transparent,
         showDragHandle: true,
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          minimumSize: const Size.square(AppDimensions.minTouchTarget),
+          iconSize: AppDimensions.iconLarge,
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(48, AppDimensions.minTouchTarget),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.radiusControl),
+          ),
+          textStyle: AppTextStyles.label.copyWith(fontWeight: FontWeight.w700),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(48, AppDimensions.minTouchTarget),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.radiusControl),
+          ),
+          textStyle: AppTextStyles.label.copyWith(fontWeight: FontWeight.w700),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          minimumSize: const Size(48, AppDimensions.minTouchTarget),
+          foregroundColor: AppColors.accentDark,
+          textStyle: AppTextStyles.label.copyWith(fontWeight: FontWeight.w700),
+        ),
       ),
     );
   }

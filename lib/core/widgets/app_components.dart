@@ -4,6 +4,7 @@ export 'empty_state.dart';
 export 'filter_chip_bar.dart';
 export 'filter_chip_option.dart';
 export 'key_value_row.dart';
+export 'metric_overview.dart';
 export 'page_header.dart';
 export 'responsive_page.dart';
 export 'section_header.dart';

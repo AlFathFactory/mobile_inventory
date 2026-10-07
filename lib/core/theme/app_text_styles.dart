@@ -5,9 +5,15 @@ import 'app_colors.dart';
 abstract final class AppTextStyles {
   static const fontFamily = 'IBMPlexSansArabic';
 
+  static const screenTitle = TextStyle(
+    fontSize: 20,
+    height: 1.3,
+    fontWeight: FontWeight.w700,
+    color: AppColors.text,
+  );
   static const pageTitle = TextStyle(
-    fontSize: 16,
-    height: 1.25,
+    fontSize: 17,
+    height: 1.3,
     fontWeight: FontWeight.w700,
     color: AppColors.text,
   );
@@ -26,7 +32,7 @@ abstract final class AppTextStyles {
   static const body = TextStyle(
     fontSize: 13,
     height: 1.55,
-    fontWeight: FontWeight.w300,
+    fontWeight: FontWeight.w400,
     color: AppColors.text,
   );
   static const label = TextStyle(
@@ -38,8 +44,8 @@ abstract final class AppTextStyles {
   static const caption = TextStyle(
     fontSize: 11,
     height: 1.45,
-    fontWeight: FontWeight.w300,
-    color: AppColors.neutral600,
+    fontWeight: FontWeight.w400,
+    color: AppColors.neutral700,
   );
   static const number = TextStyle(
     fontSize: 23,

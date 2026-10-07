@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/app_card.dart';
 import '../model/inventory_item.dart';
 
 class ItemInformationSection extends StatelessWidget {
@@ -41,21 +42,15 @@ class ItemInformationSection extends StatelessWidget {
       children: [
         const Text('معلومات الصنف', style: AppTextStyles.sectionTitle),
         const SizedBox(height: 10),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(22),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(15),
-            child: Column(
-              children: [
-                for (var index = 0; index < entries.length; index++) ...[
-                  _InformationRow(entry: entries[index]),
-                  if (index != entries.length - 1) const SizedBox(height: 14),
-                ],
+        AppCard(
+          padding: const EdgeInsets.all(15),
+          child: Column(
+            children: [
+              for (var index = 0; index < entries.length; index++) ...[
+                _InformationRow(entry: entries[index]),
+                if (index != entries.length - 1) const SizedBox(height: 14),
               ],
-            ),
+            ],
           ),
         ),
       ],

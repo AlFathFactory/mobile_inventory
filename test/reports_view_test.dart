@@ -189,10 +189,12 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text('التقارير'), findsOneWidget);
 
-      final scrollable = find.descendant(
-        of: find.byKey(const PageStorageKey('reports-list')),
-        matching: find.byType(Scrollable),
-      );
+      final scrollable = find
+          .descendant(
+            of: find.byKey(const PageStorageKey('reports-list')),
+            matching: find.byType(Scrollable),
+          )
+          .first;
       final position = tester.state<ScrollableState>(scrollable).position;
       position.jumpTo(position.maxScrollExtent);
       await tester.pump();

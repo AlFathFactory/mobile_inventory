@@ -36,67 +36,60 @@ class _CatalogueItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.surface,
-      borderRadius: BorderRadius.circular(20),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(12, 12, 10, 12),
-          child: Row(
-            children: [
-              InventoryCategoryIcon(category: item.category, size: 50),
-              const SizedBox(width: 11),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    return AppCard(
+      onTap: onTap,
+      padding: const EdgeInsetsDirectional.fromSTEB(12, 12, 10, 12),
+      child: Row(
+        children: [
+          InventoryCategoryIcon(category: item.category, size: 50),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.cardTitle,
+                ),
+                const SizedBox(height: 3),
+                Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Text(
+                    item.code,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.code,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
                   children: [
-                    Text(
-                      item.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.cardTitle,
-                    ),
-                    const SizedBox(height: 3),
-                    Directionality(
-                      textDirection: TextDirection.ltr,
-                      child: Text(
-                        item.code,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.code,
+                    Flexible(
+                      child: _ContextLabel(
+                        icon: Icons.category_outlined,
+                        label: item.category,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Flexible(
-                          child: _ContextLabel(
-                            icon: Icons.category_outlined,
-                            label: item.category,
-                          ),
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 6),
-                          child: Text('·', style: AppTextStyles.caption),
-                        ),
-                        Flexible(
-                          child: _ContextLabel(
-                            icon: Icons.location_on_outlined,
-                            label: item.project,
-                          ),
-                        ),
-                      ],
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 6),
+                      child: Text('·', style: AppTextStyles.caption),
+                    ),
+                    Flexible(
+                      child: _ContextLabel(
+                        icon: Icons.location_on_outlined,
+                        label: item.project,
+                      ),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(width: 8),
-              _CatalogueQuantity(item: item),
-            ],
+              ],
+            ),
           ),
-        ),
+          const SizedBox(width: 8),
+          _CatalogueQuantity(item: item),
+        ],
       ),
     );
   }

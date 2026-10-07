@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_dimensions.dart';
 import '../../../core/widgets/responsive_page.dart';
 import '../controller/reports_controller.dart';
 import '../widgets/report_date_range_picker.dart';
@@ -32,41 +33,46 @@ class ReportsView extends StatelessWidget {
         builder: (context, child) {
           final movements = controller.visibleMovements;
           final snapshot = controller.snapshot;
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ReportsHeader(totalCount: snapshot.total),
-              const SizedBox(height: 16),
-              ReportsOverview(snapshot: snapshot),
-              const SizedBox(height: 13),
-              ReportsPeriodSelector(
-                period: controller.period,
-                hasCustomRange: controller.dateRange != null,
-                onSelectPeriod: controller.selectPeriod,
-                onPickCustom: () => _pickCustomRange(context),
+          return CustomScrollView(
+            key: const PageStorageKey('reports-list'),
+            slivers: [
+              SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ReportsHeader(totalCount: snapshot.total),
+                    const SizedBox(height: AppDimensions.space16),
+                    ReportsOverview(snapshot: snapshot),
+                    const SizedBox(height: AppDimensions.space12),
+                    ReportsPeriodSelector(
+                      period: controller.period,
+                      hasCustomRange: controller.dateRange != null,
+                      onSelectPeriod: controller.selectPeriod,
+                      onPickCustom: () => _pickCustomRange(context),
+                    ),
+                    const SizedBox(height: AppDimensions.space12),
+                    ReportFilters(controller: controller),
+                    const SizedBox(height: AppDimensions.space16),
+                    ReportsResultsHeader(
+                      count: movements.length,
+                      hasActiveFilters: controller.hasActiveFilters,
+                      onClear: controller.clearFilters,
+                    ),
+                    const SizedBox(height: AppDimensions.space8),
+                  ],
+                ),
               ),
-              const SizedBox(height: 12),
-              ReportFilters(controller: controller),
-              const SizedBox(height: 15),
-              ReportsResultsHeader(
-                count: movements.length,
-                hasActiveFilters: controller.hasActiveFilters,
-                onClear: controller.clearFilters,
-              ),
-              const SizedBox(height: 9),
-              Expanded(
-                child: movements.isEmpty
-                    ? SingleChildScrollView(
-                        child: ReportsEmptyState(
-                          hasActiveFilters: controller.hasActiveFilters,
-                        ),
-                      )
-                    : ListView(
-                        key: const PageStorageKey('reports-list'),
-                        padding: const EdgeInsets.only(bottom: 12),
-                        children: [ReportsMovementList(movements: movements)],
-                      ),
-              ),
+              if (movements.isEmpty)
+                SliverToBoxAdapter(
+                  child: ReportsEmptyState(
+                    hasActiveFilters: controller.hasActiveFilters,
+                  ),
+                )
+              else
+                SliverToBoxAdapter(
+                  child: ReportsMovementList(movements: movements),
+                ),
+              const SliverPadding(padding: EdgeInsets.only(bottom: 12)),
             ],
           );
         },

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/metric_overview.dart';
 import '../model/alert_summary.dart';
 
 class AlertsOverview extends StatelessWidget {
@@ -11,96 +11,22 @@ class AlertsOverview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
+    return MetricOverview(
       key: const Key('alerts-overview'),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
-        child: Row(
-          children: [
-            Expanded(
-              child: _OverviewSegment(
-                count: summary.lowCount,
-                label: 'مخزون منخفض',
-                color: AppColors.low,
-                background: AppColors.lowSoft,
-                icon: Icons.warning_amber_rounded,
-              ),
-            ),
-            Container(width: 1, height: 44, color: AppColors.divider),
-            Expanded(
-              child: _OverviewSegment(
-                count: summary.outOfStockCount,
-                label: 'نفد المخزون',
-                color: AppColors.out,
-                background: AppColors.outSoft,
-                icon: Icons.error_outline_rounded,
-              ),
-            ),
-          ],
+      metrics: [
+        OverviewMetric(
+          count: summary.lowCount,
+          label: 'مخزون منخفض',
+          color: AppColors.low,
+          background: AppColors.lowSoft,
+          icon: Icons.warning_amber_rounded,
         ),
-      ),
-    );
-  }
-}
-
-class _OverviewSegment extends StatelessWidget {
-  const _OverviewSegment({
-    required this.count,
-    required this.label,
-    required this.color,
-    required this.background,
-    required this.icon,
-  });
-
-  final int count;
-  final String label;
-  final Color color;
-  final Color background;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DecoratedBox(
-              decoration: BoxDecoration(
-                color: background,
-                shape: BoxShape.circle,
-              ),
-              child: SizedBox.square(
-                dimension: 30,
-                child: Icon(icon, size: 16, color: color),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                '$count',
-                textDirection: TextDirection.ltr,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.number.copyWith(
-                  color: color,
-                  fontSize: 24,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w500),
+        OverviewMetric(
+          count: summary.outOfStockCount,
+          label: 'نفد المخزون',
+          color: AppColors.out,
+          background: AppColors.outSoft,
+          icon: Icons.error_outline_rounded,
         ),
       ],
     );

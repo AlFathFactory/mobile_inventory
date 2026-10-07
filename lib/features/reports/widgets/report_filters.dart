@@ -192,7 +192,7 @@ class _CompactAction extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: SizedBox(
-          height: 46,
+          height: 48,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Row(
@@ -372,7 +372,7 @@ class _TypeButton extends StatelessWidget {
         key: ValueKey('report-movement-${option.$2}'),
         onTap: onTap,
         child: SizedBox(
-          height: 44,
+          height: 48,
           child: Center(
             child: Text(
               option.$2,

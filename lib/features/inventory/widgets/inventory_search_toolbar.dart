@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_text_styles.dart';
 
 class InventorySearchToolbar extends StatelessWidget {
@@ -34,7 +35,7 @@ class InventorySearchToolbar extends StatelessWidget {
             decoration: InputDecoration(
               hintText: 'ابحث باسم الصنف أو الكود',
               hintStyle: AppTextStyles.body.copyWith(
-                color: AppColors.neutral500,
+                color: AppColors.neutral600,
               ),
               prefixIcon: const Icon(
                 Icons.search_rounded,
@@ -58,7 +59,9 @@ class InventorySearchToolbar extends StatelessWidget {
               border: _border,
               enabledBorder: _border,
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(
+                  AppDimensions.radiusControl,
+                ),
                 borderSide: const BorderSide(
                   color: AppColors.accent,
                   width: 1.4,
@@ -74,7 +77,7 @@ class InventorySearchToolbar extends StatelessWidget {
   }
 
   static final _border = OutlineInputBorder(
-    borderRadius: BorderRadius.circular(18),
+    borderRadius: BorderRadius.circular(AppDimensions.radiusControl),
     borderSide: BorderSide.none,
   );
 }
@@ -89,11 +92,11 @@ class _FilterButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: count > 0 ? AppColors.accentVerySoft : AppColors.surface,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(AppDimensions.radiusControl),
       child: InkWell(
         key: const Key('open-inventory-filters'),
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusControl),
         child: SizedBox.square(
           dimension: 52,
           child: Stack(

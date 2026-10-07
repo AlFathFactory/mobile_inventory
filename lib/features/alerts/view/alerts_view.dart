@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/responsive_page.dart';
 import '../../inventory/model/inventory_item.dart';
@@ -28,59 +29,64 @@ class AlertsView extends StatelessWidget {
         builder: (context, child) {
           final items = controller.visibleItems;
           final summary = controller.summary;
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AlertsHeader(
-                totalCount: summary.lowCount + summary.outOfStockCount,
-              ),
-              const SizedBox(height: 16),
-              AlertsOverview(summary: summary),
-              const SizedBox(height: 13),
-              AlertsStatusFilters(
-                selected: controller.selectedStatus,
-                onSelected: controller.selectStatus,
-              ),
-              const SizedBox(height: 15),
-              Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'الأصناف المحتاجة انتباه',
-                      style: AppTextStyles.sectionTitle,
+          return CustomScrollView(
+            key: const PageStorageKey('alerts-list'),
+            slivers: [
+              SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AlertsHeader(
+                      totalCount: summary.lowCount + summary.outOfStockCount,
                     ),
-                  ),
-                  Text(
-                    '${items.length}',
-                    textDirection: TextDirection.ltr,
-                    style: AppTextStyles.caption,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 9),
-              Expanded(
-                child: items.isEmpty
-                    ? SingleChildScrollView(
-                        child: AlertsEmptyState(
-                          isFiltering: controller.selectedStatus != null,
+                    const SizedBox(height: AppDimensions.space16),
+                    AlertsOverview(summary: summary),
+                    const SizedBox(height: AppDimensions.space12),
+                    AlertsStatusFilters(
+                      selected: controller.selectedStatus,
+                      onSelected: controller.selectStatus,
+                    ),
+                    const SizedBox(height: AppDimensions.space16),
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'الأصناف المحتاجة انتباه',
+                            style: AppTextStyles.sectionTitle,
+                          ),
                         ),
-                      )
-                    : ListView.separated(
-                        key: const PageStorageKey('alerts-list'),
-                        padding: const EdgeInsets.only(bottom: 12),
-                        itemCount: items.length,
-                        separatorBuilder: (context, index) =>
-                            const SizedBox(height: 9),
-                        itemBuilder: (context, index) {
-                          final item = items[index];
-                          return AlertItemCard(
-                            key: ValueKey('alert-${item.code}'),
-                            item: item,
-                            onTap: () => onOpenItem(item),
-                          );
-                        },
-                      ),
+                        Text(
+                          '${items.length}',
+                          textDirection: TextDirection.ltr,
+                          style: AppTextStyles.caption,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppDimensions.space8),
+                  ],
+                ),
               ),
+              if (items.isEmpty)
+                SliverToBoxAdapter(
+                  child: AlertsEmptyState(
+                    isFiltering: controller.selectedStatus != null,
+                  ),
+                )
+              else
+                SliverList.separated(
+                  itemCount: items.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: AppDimensions.space8),
+                  itemBuilder: (context, index) {
+                    final item = items[index];
+                    return AlertItemCard(
+                      key: ValueKey('alert-${item.code}'),
+                      item: item,
+                      onTap: () => onOpenItem(item),
+                    );
+                  },
+                ),
+              const SliverPadding(padding: EdgeInsets.only(bottom: 12)),
             ],
           );
         },

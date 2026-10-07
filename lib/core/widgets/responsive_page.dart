@@ -1,22 +1,23 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_dimensions.dart';
+
 class ResponsivePage extends StatelessWidget {
-  const ResponsivePage({
-    required this.child,
-    super.key,
-    this.padding = const EdgeInsets.fromLTRB(20, 12, 20, 24),
-  });
+  const ResponsivePage({required this.child, super.key, this.padding});
 
   final Widget child;
-  final EdgeInsetsGeometry padding;
+  final EdgeInsetsGeometry? padding;
 
   @override
   Widget build(BuildContext context) {
+    final defaultPadding = MediaQuery.sizeOf(context).width <= 360
+        ? AppDimensions.compactPagePadding
+        : AppDimensions.pagePadding;
     return Align(
       alignment: Alignment.topCenter,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 600),
-        child: Padding(padding: padding, child: child),
+        constraints: const BoxConstraints(maxWidth: AppDimensions.pageMaxWidth),
+        child: Padding(padding: padding ?? defaultPadding, child: child),
       ),
     );
   }

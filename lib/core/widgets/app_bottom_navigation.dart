@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import '../theme/app_dimensions.dart';
 
 class AppBottomNavigation extends StatelessWidget {
   const AppBottomNavigation({
@@ -19,7 +20,7 @@ class AppBottomNavigation extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
           border: Border.all(color: AppColors.accentVerySoft),
           boxShadow: const [
             BoxShadow(
@@ -30,7 +31,7 @@ class AppBottomNavigation extends StatelessWidget {
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
           child: NavigationBarTheme(
             data: NavigationBarThemeData(
               height: 68,
@@ -38,7 +39,9 @@ class AppBottomNavigation extends StatelessWidget {
               surfaceTintColor: Colors.transparent,
               indicatorColor: AppColors.accentSoft,
               indicatorShape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(
+                  AppDimensions.radiusControl,
+                ),
               ),
               labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
               labelTextStyle: WidgetStateProperty.resolveWith((states) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_dimensions.dart';
 import '../../../core/widgets/responsive_page.dart';
 import '../../inventory/model/inventory_item.dart';
 import '../../inventory/model/inventory_movement.dart';
@@ -39,19 +40,19 @@ class DashboardView extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 12),
         children: [
           DashboardHeader(onNotificationsTap: onShowAlerts),
-          const SizedBox(height: 18),
+          const SizedBox(height: AppDimensions.space16),
           DashboardSearch(onTap: () => onShowInventory(null)),
-          const SizedBox(height: 22),
+          const SizedBox(height: AppDimensions.space24),
           InventoryOverview(metrics: metrics),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppDimensions.space24),
           DashboardCategories(
             categories: categories,
             onShowAll: () => onShowInventory(null),
             onCategoryTap: (category) => onShowInventory(category.name),
           ),
-          const SizedBox(height: 25),
+          const SizedBox(height: AppDimensions.space24),
           NeedsAttentionSection(items: attentionItems, onShowAll: onShowAlerts),
-          const SizedBox(height: 25),
+          const SizedBox(height: AppDimensions.space24),
           RecentActivitySection(
             movements: recentMovements,
             onShowReports: onShowReports,

@@ -18,7 +18,14 @@ class SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: Text(title, style: AppTextStyles.sectionTitle)),
+        Expanded(
+          child: Text(
+            title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.sectionTitle,
+          ),
+        ),
         if (actionLabel != null)
           TextButton(onPressed: onAction, child: Text(actionLabel!)),
       ],

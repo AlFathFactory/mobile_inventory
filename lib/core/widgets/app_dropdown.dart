@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import '../theme/app_dimensions.dart';
 import '../theme/app_text_styles.dart';
 
 class AppDropdown<T> extends StatelessWidget {
@@ -22,7 +23,7 @@ class AppDropdown<T> extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusControl),
         border: Border.all(color: AppColors.divider),
       ),
       child: Padding(
@@ -33,7 +34,7 @@ class AppDropdown<T> extends StatelessWidget {
             hint: Text(hint, style: AppTextStyles.caption),
             isDense: true,
             isExpanded: true,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusControl),
             style: AppTextStyles.label,
             items: [
               for (final entry in options.entries)
