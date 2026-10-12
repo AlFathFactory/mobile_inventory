@@ -1,0 +1,10 @@
+import '../../../../core/data/repositories/data_result.dart';
+import '../../../../core/data/repositories/page.dart';
+import '../../model/inventory_item.dart';
+import '../models/inventory_query.dart';
+
+abstract interface class InventoryRepository {
+  Future<DataResult<PageResult<InventoryItem>>> fetchItems(
+    InventoryQuery query,
+  );
+}
