@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_dimensions.dart';
@@ -31,6 +33,8 @@ class _InventoryViewState extends State<InventoryView> {
   late final TextEditingController _searchController = TextEditingController(
     text: widget.controller.query,
   );
+  late final ScrollController _scrollController = ScrollController()
+    ..addListener(_loadNextPageNearEnd);
 
   @override
   void initState() {
@@ -57,10 +61,19 @@ class _InventoryViewState extends State<InventoryView> {
     );
   }
 
+  void _loadNextPageNearEnd() {
+    if (!_scrollController.hasClients ||
+        _scrollController.position.extentAfter > 320) {
+      return;
+    }
+    unawaited(widget.controller.loadNextPage());
+  }
+
   @override
   void dispose() {
     widget.controller.removeListener(_syncSearchText);
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -81,6 +94,7 @@ class _InventoryViewState extends State<InventoryView> {
               : widget.controller.visibleItems;
           return CustomScrollView(
             key: const PageStorageKey('inventory-list'),
+            controller: _scrollController,
             slivers: [
               SliverToBoxAdapter(
                 child: Column(
@@ -133,7 +147,7 @@ class _InventoryViewState extends State<InventoryView> {
                   itemBuilder: (context, index) {
                     final item = items[index];
                     return InventoryItemCard(
-                      key: ValueKey(item.code),
+                      key: ValueKey(item.routeId),
                       item: item,
                       showCatalogueContext: true,
                       onTap: () => widget.onOpenItem(item),

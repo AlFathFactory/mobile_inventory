@@ -7,6 +7,8 @@ import '../../features/alerts/controller/alerts_controller.dart';
 import '../../features/alerts/view/alerts_view.dart';
 import '../../features/dashboard/view/dashboard_view.dart';
 import '../../features/inventory/controller/inventory_controller.dart';
+import '../../features/inventory/data/repositories/inventory_repository.dart';
+import '../../features/inventory/data/repositories/preview_inventory_repository.dart';
 import '../../features/inventory/model/inventory_item.dart';
 import '../../features/inventory/view/inventory_view.dart';
 import '../../features/inventory/view/item_details_view.dart';
@@ -19,14 +21,15 @@ import 'app_routes.dart';
 import 'not_found_view.dart';
 
 class AppRouter {
-  AppRouter({required Duration previewLoadDelay}) {
+  AppRouter({
+    required Duration previewLoadDelay,
+    InventoryRepository? inventoryRepository,
+  }) : inventoryController = _createInventoryController(inventoryRepository) {
     unawaited(inventoryController.loadPreviewData(delay: previewLoadDelay));
   }
 
   final rootNavigatorKey = GlobalKey<NavigatorState>();
-  final inventoryController = InventoryController(
-    items: PreviewData.catalogItems,
-  );
+  final InventoryController inventoryController;
   final alertsController = AlertsController(PreviewData.alertItems);
   final reportsController = ReportsController(PreviewData.reportMovements);
   bool _isOpeningItem = false;
@@ -136,10 +139,29 @@ class AppRouter {
     ],
   );
 
-  InventoryItem? _findItem(String? code) {
-    if (code == null) return null;
+  static InventoryController _createInventoryController(
+    InventoryRepository? repository,
+  ) {
+    if (repository == null || repository is PreviewInventoryRepository) {
+      return InventoryController(
+        items: PreviewData.catalogItems,
+        repository: repository ?? const PreviewInventoryRepository(),
+      );
+    }
+    return InventoryController(
+      items: PreviewData.catalogItems,
+      repository: repository,
+      serverBacked: true,
+    );
+  }
+
+  InventoryItem? _findItem(String? routeId) {
+    if (routeId == null) return null;
+    for (final item in inventoryController.allItems) {
+      if (item.routeId == routeId || item.code == routeId) return item;
+    }
     for (final item in PreviewData.items) {
-      if (item.code == code) return item;
+      if (item.routeId == routeId || item.code == routeId) return item;
     }
     return null;
   }
@@ -147,14 +169,14 @@ class AppRouter {
   void _openItem(BuildContext context, InventoryItem item) {
     // The detail page is presented above the selected tab. Keep one push in
     // flight so a rapid double tap cannot duplicate it on the root navigator.
-    if (_isOpeningItem || _findItem(item.code) == null) return;
+    if (_isOpeningItem || _findItem(item.routeId) == null) return;
 
     FocusManager.instance.primaryFocus?.unfocus();
     _isOpeningItem = true;
     context
         .pushNamed<void>(
           AppRouteNames.itemDetails,
-          pathParameters: {'code': item.code},
+          pathParameters: {'code': item.routeId},
           extra: _originRouteFor(context),
         )
         .then<void>(
@@ -166,7 +188,9 @@ class AppRouter {
   void _showInventory(BuildContext context, String? category) {
     // Dashboard data is local preview data, but tolerate a stale category if
     // this entry point is ever fed by a route or refreshed data source.
-    if (category != null && inventoryController.categories.contains(category)) {
+    if (category != null &&
+        (inventoryController.isServerBacked ||
+            inventoryController.categories.contains(category))) {
       inventoryController.filterByCategory(category);
     } else {
       inventoryController.clearFilters(includeQuery: true);
@@ -207,7 +231,7 @@ class AppRouter {
     }
     context.goNamed(
       AppRouteNames.itemDetails,
-      pathParameters: {'code': item.code},
+      pathParameters: {'code': item.routeId},
     );
   }
 
