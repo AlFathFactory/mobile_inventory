@@ -17,20 +17,30 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: ListenableBuilder(
-          listenable: loadingController,
-          child: navigationShell,
-          builder: (context, child) =>
-              Skeletonizer(enabled: loadingController.isLoading, child: child!),
+    return PopScope(
+      canPop: navigationShell.currentIndex == 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && navigationShell.currentIndex != 0) {
+          navigationShell.goBranch(0);
+        }
+      },
+      child: Scaffold(
+        body: SafeArea(
+          child: ListenableBuilder(
+            listenable: loadingController,
+            child: navigationShell,
+            builder: (context, child) => Skeletonizer(
+              enabled: loadingController.isLoading,
+              child: child!,
+            ),
+          ),
         ),
-      ),
-      bottomNavigationBar: AppBottomNavigation(
-        selectedIndex: navigationShell.currentIndex,
-        onDestinationSelected: (index) => navigationShell.goBranch(
-          index,
-          initialLocation: index == navigationShell.currentIndex,
+        bottomNavigationBar: AppBottomNavigation(
+          selectedIndex: navigationShell.currentIndex,
+          onDestinationSelected: (index) => navigationShell.goBranch(
+            index,
+            initialLocation: index == navigationShell.currentIndex,
+          ),
         ),
       ),
     );

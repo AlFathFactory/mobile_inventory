@@ -33,7 +33,33 @@ class _InventoryViewState extends State<InventoryView> {
   );
 
   @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_syncSearchText);
+  }
+
+  @override
+  void didUpdateWidget(covariant InventoryView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller == widget.controller) return;
+    oldWidget.controller.removeListener(_syncSearchText);
+    widget.controller.addListener(_syncSearchText);
+    _syncSearchText();
+  }
+
+  void _syncSearchText() {
+    if (_searchController.text == widget.controller.query) return;
+    _searchController.value = TextEditingValue(
+      text: widget.controller.query,
+      selection: TextSelection.collapsed(
+        offset: widget.controller.query.length,
+      ),
+    );
+  }
+
+  @override
   void dispose() {
+    widget.controller.removeListener(_syncSearchText);
     _searchController.dispose();
     super.dispose();
   }

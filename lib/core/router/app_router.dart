@@ -82,8 +82,10 @@ class AppRouter {
                       return ItemDetailsView(
                         item: item,
                         movements: PreviewData.movementsFor(item.code),
-                        onBack: () =>
-                            _closeItemDetails(context, state.extra as String?),
+                        onBack: () => _closeItemDetails(
+                          context,
+                          _validOriginRoute(state.extra),
+                        ),
                       );
                     },
                     routes: [
@@ -167,9 +169,19 @@ class AppRouter {
     if (category != null && inventoryController.categories.contains(category)) {
       inventoryController.filterByCategory(category);
     } else {
-      inventoryController.clearFilters();
+      inventoryController.clearFilters(includeQuery: true);
     }
     context.goNamed(AppRouteNames.inventory);
+  }
+
+  String? _validOriginRoute(Object? extra) {
+    if (extra is! String) return null;
+    return switch (extra) {
+      AppRouteNames.inventory ||
+      AppRouteNames.alerts ||
+      AppRouteNames.reports => extra,
+      _ => null,
+    };
   }
 
   String _originRouteFor(BuildContext context) {

@@ -59,8 +59,10 @@ void main() {
       controller.setQuickStatus(StockStatus.outOfStock);
       expect(controller.visibleItems.single.code, 'GS-OX-004');
 
+      controller.setQuery('GS-OX-004');
       controller.filterByCategory('الدهانات');
       expect(controller.quickStatus, isNull);
+      expect(controller.query, isEmpty);
       expect(controller.visibleItems.single.code, 'PA-GN-059');
     });
 

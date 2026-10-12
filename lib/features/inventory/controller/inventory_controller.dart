@@ -93,6 +93,7 @@ class InventoryController extends ChangeNotifier {
   }
 
   void filterByCategory(String category) {
+    _query = '';
     _quickStatus = null;
     _filter = InventoryFilter(categories: {category});
     notifyListeners();
