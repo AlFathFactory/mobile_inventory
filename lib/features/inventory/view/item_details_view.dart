@@ -39,6 +39,7 @@ class _ItemDetailsViewState extends State<ItemDetailsView> {
         .pushNamed<void>(
           AppRouteNames.itemHistory,
           pathParameters: {'code': widget.item.routeId},
+          extra: widget.item,
         )
         .then<void>(
           (_) => _isOpeningHistory = false,

@@ -4,16 +4,22 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/theme/app_theme.dart';
 import 'core/router/app_router.dart';
 import 'features/inventory/data/repositories/inventory_repository.dart';
+import 'features/inventory/data/repositories/item_details_repository.dart';
+import 'features/inventory/data/repositories/movement_history_repository.dart';
 
 class MyApp extends StatefulWidget {
   const MyApp({
     super.key,
     this.previewLoadDelay = const Duration(milliseconds: 650),
     this.inventoryRepository,
+    this.itemDetailsRepository,
+    this.movementHistoryRepository,
   });
 
   final Duration previewLoadDelay;
   final InventoryRepository? inventoryRepository;
+  final ItemDetailsRepository? itemDetailsRepository;
+  final MovementHistoryRepository? movementHistoryRepository;
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -23,6 +29,8 @@ class _MyAppState extends State<MyApp> {
   late final AppRouter _appRouter = AppRouter(
     previewLoadDelay: widget.previewLoadDelay,
     inventoryRepository: widget.inventoryRepository,
+    itemDetailsRepository: widget.itemDetailsRepository,
+    movementHistoryRepository: widget.movementHistoryRepository,
   );
 
   @override

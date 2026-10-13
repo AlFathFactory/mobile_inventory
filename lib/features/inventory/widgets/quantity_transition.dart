@@ -13,8 +13,8 @@ class QuantityTransition extends StatelessWidget {
     super.key,
   });
 
-  final int before;
-  final int after;
+  final num before;
+  final num after;
 
   @override
   Widget build(BuildContext context) {

@@ -5,10 +5,10 @@ import '../../../../core/data/repositories/page.dart';
 @immutable
 class MovementHistoryQuery {
   const MovementHistoryQuery({
-    required this.itemCode,
+    required this.itemRouteId,
     this.page = const PageRequest(),
   });
 
-  final String itemCode;
+  final String itemRouteId;
   final PageRequest page;
 }

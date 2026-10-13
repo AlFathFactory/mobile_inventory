@@ -44,9 +44,9 @@ class PreviewInventoryRepository
   }
 
   @override
-  Future<DataResult<InventoryItem?>> fetchItemByCode(String code) async {
+  Future<DataResult<InventoryItem?>> fetchItemByRouteId(String routeId) async {
     for (final item in PreviewData.items) {
-      if (item.code == code) return DataSuccess(item);
+      if (item.routeId == routeId) return DataSuccess(item);
     }
     return const DataSuccess(null);
   }
@@ -55,7 +55,7 @@ class PreviewInventoryRepository
   Future<DataResult<PageResult<InventoryMovement>>> fetchMovements(
     MovementHistoryQuery query,
   ) async {
-    final movements = PreviewData.movementsFor(query.itemCode);
+    final movements = PreviewData.movementsFor(query.itemRouteId);
     return DataSuccess(paginatePreview(movements, query.page));
   }
 }

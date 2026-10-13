@@ -8,11 +8,12 @@ import '../../features/alerts/view/alerts_view.dart';
 import '../../features/dashboard/view/dashboard_view.dart';
 import '../../features/inventory/controller/inventory_controller.dart';
 import '../../features/inventory/data/repositories/inventory_repository.dart';
+import '../../features/inventory/data/repositories/item_details_repository.dart';
+import '../../features/inventory/data/repositories/movement_history_repository.dart';
 import '../../features/inventory/data/repositories/preview_inventory_repository.dart';
 import '../../features/inventory/model/inventory_item.dart';
 import '../../features/inventory/view/inventory_view.dart';
-import '../../features/inventory/view/item_details_view.dart';
-import '../../features/inventory/view/movement_history_view.dart';
+import '../../features/inventory/view/item_details_route_view.dart';
 import '../../features/reports/controller/reports_controller.dart';
 import '../../features/reports/view/reports_view.dart';
 import '../data/preview_data.dart';
@@ -24,12 +25,20 @@ class AppRouter {
   AppRouter({
     required Duration previewLoadDelay,
     InventoryRepository? inventoryRepository,
-  }) : inventoryController = _createInventoryController(inventoryRepository) {
+    ItemDetailsRepository? itemDetailsRepository,
+    MovementHistoryRepository? movementHistoryRepository,
+  }) : itemDetailsRepository =
+           itemDetailsRepository ?? const PreviewInventoryRepository(),
+       movementHistoryRepository =
+           movementHistoryRepository ?? const PreviewInventoryRepository(),
+       inventoryController = _createInventoryController(inventoryRepository) {
     unawaited(inventoryController.loadPreviewData(delay: previewLoadDelay));
   }
 
   final rootNavigatorKey = GlobalKey<NavigatorState>();
   final InventoryController inventoryController;
+  final ItemDetailsRepository itemDetailsRepository;
+  final MovementHistoryRepository movementHistoryRepository;
   final alertsController = AlertsController(PreviewData.alertItems);
   final reportsController = ReportsController(PreviewData.reportMovements);
   bool _isOpeningItem = false;
@@ -80,33 +89,40 @@ class AppRouter {
                     path: ':code',
                     name: AppRouteNames.itemDetails,
                     builder: (context, state) {
-                      final item = _findItem(state.pathParameters['code']);
-                      if (item == null) return const NotFoundView();
-                      return ItemDetailsView(
-                        item: item,
-                        movements: PreviewData.movementsFor(item.code),
+                      return ItemDetailsRouteView(
+                        routeId: state.pathParameters['code'] ?? '',
+                        repository: itemDetailsRepository,
+                        movementRepository: movementHistoryRepository,
                         onBack: () => _closeItemDetails(
                           context,
                           _validOriginRoute(state.extra),
                         ),
                       );
                     },
-                    routes: [
-                      GoRoute(
-                        parentNavigatorKey: rootNavigatorKey,
-                        path: 'history',
-                        name: AppRouteNames.itemHistory,
-                        builder: (context, state) {
-                          final item = _findItem(state.pathParameters['code']);
-                          if (item == null) return const NotFoundView();
-                          return MovementHistoryView(
-                            item: item,
-                            movements: PreviewData.movementsFor(item.code),
-                            onBack: () => _closeMovementHistory(context, item),
-                          );
-                        },
-                      ),
-                    ],
+                  ),
+                  GoRoute(
+                    parentNavigatorKey: rootNavigatorKey,
+                    path: ':code/history',
+                    name: AppRouteNames.itemHistory,
+                    builder: (context, state) {
+                      final routeId = state.pathParameters['code'] ?? '';
+                      final extra = state.extra;
+                      final initialItem =
+                          extra is InventoryItem && extra.routeId == routeId
+                          ? extra
+                          : null;
+                      return ItemHistoryRouteView(
+                        routeId: routeId,
+                        repository: itemDetailsRepository,
+                        movementRepository: movementHistoryRepository,
+                        initialItem: initialItem,
+                        onBack: (item) => _closeMovementHistory(
+                          context,
+                          item,
+                          directRoute: initialItem == null,
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -158,10 +174,13 @@ class AppRouter {
   InventoryItem? _findItem(String? routeId) {
     if (routeId == null) return null;
     for (final item in inventoryController.allItems) {
-      if (item.routeId == routeId || item.code == routeId) return item;
+      if (item.routeId == routeId ||
+          (!item.hasBackendIdentity && item.code == routeId)) {
+        return item;
+      }
     }
     for (final item in PreviewData.items) {
-      if (item.routeId == routeId || item.code == routeId) return item;
+      if (item.routeId == routeId) return item;
     }
     return null;
   }
@@ -224,8 +243,12 @@ class AppRouter {
     context.goNamed(fallbackRoute ?? AppRouteNames.inventory);
   }
 
-  void _closeMovementHistory(BuildContext context, InventoryItem item) {
-    if (router.canPop()) {
+  void _closeMovementHistory(
+    BuildContext context,
+    InventoryItem item, {
+    required bool directRoute,
+  }) {
+    if (!directRoute && router.canPop()) {
       router.pop();
       return;
     }

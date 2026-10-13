@@ -57,17 +57,19 @@ void main() {
     test('item details and movement history preserve item context', () async {
       const repository = PreviewInventoryRepository();
 
-      final item = _successValue(await repository.fetchItemByCode('PA-GN-059'));
+      final item = _successValue(
+        await repository.fetchItemByRouteId('PA-GN-059'),
+      );
       expect(item?.code, 'PA-GN-059');
       expect(
-        _successValue(await repository.fetchItemByCode('missing')),
+        _successValue(await repository.fetchItemByRouteId('missing')),
         isNull,
       );
 
       final history = _successValue(
         await repository.fetchMovements(
           const MovementHistoryQuery(
-            itemCode: 'PA-GN-059',
+            itemRouteId: 'PA-GN-059',
             page: PageRequest(limit: 2),
           ),
         ),
