@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/alerts/controller/alerts_controller.dart';
+import '../../features/alerts/data/repositories/alerts_repository.dart';
+import '../../features/alerts/data/repositories/preview_alerts_repository.dart';
 import '../../features/alerts/view/alerts_view.dart';
 import '../../features/dashboard/view/dashboard_view.dart';
 import '../../features/inventory/controller/inventory_controller.dart';
@@ -24,6 +26,7 @@ import 'not_found_view.dart';
 class AppRouter {
   AppRouter({
     required Duration previewLoadDelay,
+    AlertsRepository? alertsRepository,
     InventoryRepository? inventoryRepository,
     ItemDetailsRepository? itemDetailsRepository,
     MovementHistoryRepository? movementHistoryRepository,
@@ -31,15 +34,27 @@ class AppRouter {
            itemDetailsRepository ?? const PreviewInventoryRepository(),
        movementHistoryRepository =
            movementHistoryRepository ?? const PreviewInventoryRepository(),
+       alertsController = AlertsController(
+         repository: alertsRepository ?? const PreviewAlertsRepository(),
+       ),
        inventoryController = _createInventoryController(inventoryRepository) {
     unawaited(inventoryController.loadPreviewData(delay: previewLoadDelay));
+    unawaited(
+      alertsController.load(
+        delay:
+            alertsRepository == null ||
+                alertsRepository is PreviewAlertsRepository
+            ? previewLoadDelay
+            : Duration.zero,
+      ),
+    );
   }
 
   final rootNavigatorKey = GlobalKey<NavigatorState>();
   final InventoryController inventoryController;
+  final AlertsController alertsController;
   final ItemDetailsRepository itemDetailsRepository;
   final MovementHistoryRepository movementHistoryRepository;
-  final alertsController = AlertsController(PreviewData.alertItems);
   final reportsController = ReportsController(PreviewData.reportMovements);
   bool _isOpeningItem = false;
 
@@ -188,7 +203,10 @@ class AppRouter {
   void _openItem(BuildContext context, InventoryItem item) {
     // The detail page is presented above the selected tab. Keep one push in
     // flight so a rapid double tap cannot duplicate it on the root navigator.
-    if (_isOpeningItem || _findItem(item.routeId) == null) return;
+    if (_isOpeningItem ||
+        (!item.hasBackendIdentity && _findItem(item.routeId) == null)) {
+      return;
+    }
 
     FocusManager.instance.primaryFocus?.unfocus();
     _isOpeningItem = true;

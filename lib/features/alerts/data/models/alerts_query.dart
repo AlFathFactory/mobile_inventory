@@ -10,10 +10,12 @@ class AlertsQuery {
     this.search = '',
     this.statuses = const {},
     this.categories = const {},
+    this.projects = const {},
   });
 
   final PageRequest page;
   final String search;
   final Set<StockStatus> statuses;
   final Set<String> categories;
+  final Set<String> projects;
 }

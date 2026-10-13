@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:el_fateh/app.dart';
 import 'package:el_fateh/core/data/preview_data.dart';
 import 'package:el_fateh/core/theme/app_theme.dart';
 import 'package:el_fateh/features/alerts/controller/alerts_controller.dart';
+import 'package:el_fateh/features/alerts/data/repositories/preview_alerts_repository.dart';
 import 'package:el_fateh/features/alerts/view/alerts_view.dart';
 import 'package:el_fateh/features/inventory/model/inventory_item.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +14,7 @@ Widget _pumpAlerts(
   AlertsController controller, {
   ValueChanged<InventoryItem>? onOpen,
 }) {
+  unawaited(controller.load());
   return MaterialApp(
     theme: AppTheme.light,
     home: Directionality(
@@ -24,7 +28,9 @@ Widget _pumpAlerts(
 
 void main() {
   testWidgets('alerts shows summary counts and attention list', (tester) async {
-    final controller = AlertsController(PreviewData.alertItems);
+    final controller = AlertsController(
+      repository: const PreviewAlertsRepository(),
+    );
     addTearDown(controller.dispose);
 
     await tester.pumpWidget(_pumpAlerts(controller));
@@ -41,7 +47,9 @@ void main() {
   });
 
   testWidgets('alerts status filters narrow the list', (tester) async {
-    final controller = AlertsController(PreviewData.alertItems);
+    final controller = AlertsController(
+      repository: const PreviewAlertsRepository(),
+    );
     addTearDown(controller.dispose);
 
     await tester.pumpWidget(_pumpAlerts(controller));
@@ -65,7 +73,9 @@ void main() {
   });
 
   testWidgets('tapping an alert item opens its details', (tester) async {
-    final controller = AlertsController(PreviewData.alertItems);
+    final controller = AlertsController(
+      repository: const PreviewAlertsRepository(),
+    );
     addTearDown(controller.dispose);
 
     InventoryItem? opened;
@@ -106,7 +116,9 @@ void main() {
   testWidgets('alerts shows a friendly state when stock is healthy', (
     tester,
   ) async {
-    final controller = AlertsController(const []);
+    final controller = AlertsController(
+      repository: const PreviewAlertsRepository(items: []),
+    );
     addTearDown(controller.dispose);
 
     await tester.pumpWidget(_pumpAlerts(controller));
@@ -122,9 +134,11 @@ void main() {
     tester,
   ) async {
     final controller = AlertsController(
-      PreviewData.alertItems
-          .where((item) => item.status == StockStatus.low)
-          .toList(growable: false),
+      repository: PreviewAlertsRepository(
+        items: PreviewData.alertItems
+            .where((item) => item.status == StockStatus.low)
+            .toList(growable: false),
+      ),
     );
     addTearDown(controller.dispose);
 
@@ -146,7 +160,9 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       addTearDown(tester.view.resetPhysicalSize);
 
-      final controller = AlertsController(PreviewData.alertItems);
+      final controller = AlertsController(
+        repository: const PreviewAlertsRepository(),
+      );
       addTearDown(controller.dispose);
 
       await tester.pumpWidget(_pumpAlerts(controller));

@@ -1,8 +1,8 @@
 # Supabase integration boundary
 
-The application still runs entirely from `PreviewData`. Supabase startup and
-read contracts are present so features can move independently after the remote
-schema and read policies are agreed.
+Inventory, Item Details, Movement History, and Alerts use live Supabase reads
+when a client is configured. The remaining features continue to use
+`PreviewData` and can move independently behind their repository contracts.
 
 ## Local configuration
 
@@ -28,17 +28,16 @@ and the existing PreviewData application starts normally.
 ## Read-only data flow
 
 ```text
-View -> Controller -> Repository contract -> PreviewData adapter (current)
-                                  \-------> Supabase adapter (future)
+View -> Controller -> Repository contract -> PreviewData adapter (fallback)
+                                  \-------> Supabase adapter (configured)
                                   \-------> Local cache adapter (future)
 ```
 
 Repository contracts expose only `fetch` operations. There are no insert,
 update, delete, mutation RPC, or storage-write APIs.
 
-`PageRequest.cursor` is deliberately opaque. PreviewData uses an offset token;
-a future Supabase implementation should use a stable keyset cursor and apply
-the contract's filters before its bounded query. Repositories return
+`PageRequest.cursor` is deliberately opaque. Current adapters use deterministic
+bounded offset tokens and apply filters before querying. Repositories return
 `DataResult`, while controllers can map that result to `DataLoadState` for
 loading, success, empty, offline/unavailable, and server-error UI behavior.
 
@@ -57,15 +56,15 @@ Alert rows reuse `InventoryItem`; report rows reuse `InventoryMovement`. This
 avoids DTO copies until the actual database schema proves a transformation is
 needed.
 
-## Connecting the first live repository
+## Live Alerts strategy
 
-Start with Inventory because it establishes item identity, category IDs,
-search, status filtering, and pagination used by Item Details, Alerts, and
-Reports. Implement `InventoryRepository` with an injected `SupabaseClient`,
-keep `PreviewInventoryRepository` available as the fallback, and switch the
-composition root only after SELECT grants, RLS, indexes, and mapping tests are
-in place.
+Alerts read `public.inventory_category_items_summary_view`. The adapter filters
+the view's `status` values (`منتهي`, `قليل`) server-side, issues at most two
+bounded row queries per page to guarantee out-of-stock-before-low-stock order,
+and uses `updated_at`, `table_name`, and `item_id` as deterministic ordering
+columns inside each severity segment. Count-only queries provide the existing
+summary without downloading inventory rows.
 
-Do not query the entire inventory table. Apply a bounded page size and stable
-ordering in the Supabase adapter, and keep Supabase-specific exceptions inside
-that adapter by converting them to `DataError`.
+Every live alert retains `table_name` and `item_id`; its detail route is
+`table_name::item_id`. No alert repository exposes insert, update, delete,
+acknowledgement, RPC-write, or storage-write operations.

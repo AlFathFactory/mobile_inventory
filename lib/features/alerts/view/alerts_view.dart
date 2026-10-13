@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_dimensions.dart';
@@ -29,65 +31,73 @@ class AlertsView extends StatelessWidget {
         builder: (context, child) {
           final items = controller.visibleItems;
           final summary = controller.summary;
-          return CustomScrollView(
-            key: const PageStorageKey('alerts-list'),
-            slivers: [
-              SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    AlertsHeader(
-                      totalCount: summary.lowCount + summary.outOfStockCount,
-                    ),
-                    const SizedBox(height: AppDimensions.space16),
-                    AlertsOverview(summary: summary),
-                    const SizedBox(height: AppDimensions.space12),
-                    AlertsStatusFilters(
-                      selected: controller.selectedStatus,
-                      onSelected: controller.selectStatus,
-                    ),
-                    const SizedBox(height: AppDimensions.space16),
-                    Row(
-                      children: [
-                        const Expanded(
-                          child: Text(
-                            'الأصناف المحتاجة انتباه',
-                            style: AppTextStyles.sectionTitle,
-                          ),
-                        ),
-                        Text(
-                          '${items.length}',
-                          textDirection: TextDirection.ltr,
-                          style: AppTextStyles.caption,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppDimensions.space8),
-                  ],
-                ),
-              ),
-              if (items.isEmpty)
+          return NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (notification.metrics.extentAfter < 320) {
+                unawaited(controller.loadNextPage());
+              }
+              return false;
+            },
+            child: CustomScrollView(
+              key: const PageStorageKey('alerts-list'),
+              slivers: [
                 SliverToBoxAdapter(
-                  child: AlertsEmptyState(
-                    isFiltering: controller.selectedStatus != null,
-                  ),
-                )
-              else
-                SliverList.separated(
-                  itemCount: items.length,
-                  separatorBuilder: (context, index) =>
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AlertsHeader(
+                        totalCount: summary.lowCount + summary.outOfStockCount,
+                      ),
+                      const SizedBox(height: AppDimensions.space16),
+                      AlertsOverview(summary: summary),
+                      const SizedBox(height: AppDimensions.space12),
+                      AlertsStatusFilters(
+                        selected: controller.selectedStatus,
+                        onSelected: controller.selectStatus,
+                      ),
+                      const SizedBox(height: AppDimensions.space16),
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'الأصناف المحتاجة انتباه',
+                              style: AppTextStyles.sectionTitle,
+                            ),
+                          ),
+                          Text(
+                            '${items.length}',
+                            textDirection: TextDirection.ltr,
+                            style: AppTextStyles.caption,
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: AppDimensions.space8),
-                  itemBuilder: (context, index) {
-                    final item = items[index];
-                    return AlertItemCard(
-                      key: ValueKey('alert-${item.code}'),
-                      item: item,
-                      onTap: () => onOpenItem(item),
-                    );
-                  },
+                    ],
+                  ),
                 ),
-              const SliverPadding(padding: EdgeInsets.only(bottom: 12)),
-            ],
+                if (items.isEmpty)
+                  SliverToBoxAdapter(
+                    child: AlertsEmptyState(
+                      isFiltering: controller.isFiltering,
+                    ),
+                  )
+                else
+                  SliverList.separated(
+                    itemCount: items.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: AppDimensions.space8),
+                    itemBuilder: (context, index) {
+                      final item = items[index];
+                      return AlertItemCard(
+                        key: ValueKey('alert-${item.routeId}'),
+                        item: item,
+                        onTap: () => onOpenItem(item),
+                      );
+                    },
+                  ),
+                const SliverPadding(padding: EdgeInsets.only(bottom: 12)),
+              ],
+            ),
           );
         },
       ),
