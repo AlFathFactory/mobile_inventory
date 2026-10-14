@@ -1,8 +1,9 @@
 # Supabase integration boundary
 
-Inventory, Item Details, Movement History, and Alerts use live Supabase reads
-when a client is configured. The remaining features continue to use
-`PreviewData` and can move independently behind their repository contracts.
+Inventory, Item Details, Movement History, Alerts, and Dashboard use live
+Supabase reads when a client is configured. The remaining features continue
+to use `PreviewData` and can move independently behind their repository
+contracts.
 
 ## Local configuration
 
@@ -68,3 +69,22 @@ summary without downloading inventory rows.
 Every live alert retains `table_name` and `item_id`; its detail route is
 `table_name::item_id`. No alert repository exposes insert, update, delete,
 acknowledgement, RPC-write, or storage-write operations.
+
+## Live Dashboard strategy
+
+Dashboard reads the read-only `get_inventory_dashboard_summary_rpc` RPC for
+aggregate metrics (`total_items`, `low_stock`, `out_of_stock`) and category
+summaries (`id`/`category_id` when the backend provides one, otherwise the
+stable category name). Missing RPC keys map to zero/empty rather than failing,
+and rows without a usable category name are skipped.
+
+Attention previews reuse the Alerts segment strategy against
+`public.inventory_category_items_summary_view` (out-of-stock first, low-stock
+fill, `updated_at`, `table_name`, `item_id` ordering, bounded to the UI limit)
+and map through `InventoryItem.fromInventorySummaryRow`, preserving
+`table_name::item_id` identity. Recent activity reads a bounded newest-first
+slice of `public.inventory_item_movements_view` (`operation_date`,
+`created_at`, `id`) via `InventoryMovement.tryFromMovementViewRow`, skipping
+unknown operation types. Summary, attention, and recent reads run in parallel;
+no safe-row downloads, no N+1 queries, and no dashboard repository exposes
+writes of any kind.

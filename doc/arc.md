@@ -130,7 +130,7 @@ user event
 - Views receive controllers and navigation callbacks through constructors.
 - Small, temporary widget-only state can use `setState`; the inventory filter sheet does this for its uncommitted draft.
 - Navigation belongs primarily in `AppRouter`. Views use callbacks when crossing features. The item-details view calls a named nested route directly for its own history page.
-- Dashboard has no controller because its current metrics and lists are static inputs with no local mutation.
+- Dashboard loads through `DashboardController` (repository-driven `DataLoadState`); `DashboardView` itself stays presentational.
 
 ### Dependency direction as implemented
 
@@ -245,7 +245,7 @@ Not every feature needs every layer. Do not add empty folders or a controller fo
 
 ### Dashboard
 
-- `DashboardView` receives all data and actions from `AppRouter`.
+- `DashboardRouteView` owns the `DashboardController` and maps its load state; `DashboardView` receives data and actions and stays presentational.
 - `DashboardMetric` and `CategorySummary` are immutable display models.
 - `CategorySummaryCard` renders category navigation cards.
 - `dashboard_cards.dart` contains `StockHealthCard`, but its use is currently commented out in `DashboardView`.

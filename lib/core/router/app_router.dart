@@ -7,7 +7,10 @@ import '../../features/alerts/controller/alerts_controller.dart';
 import '../../features/alerts/data/repositories/alerts_repository.dart';
 import '../../features/alerts/data/repositories/preview_alerts_repository.dart';
 import '../../features/alerts/view/alerts_view.dart';
-import '../../features/dashboard/view/dashboard_view.dart';
+import '../../features/dashboard/controller/dashboard_controller.dart';
+import '../../features/dashboard/data/repositories/dashboard_repository.dart';
+import '../../features/dashboard/data/repositories/preview_dashboard_repository.dart';
+import '../../features/dashboard/view/dashboard_route_view.dart';
 import '../../features/inventory/controller/inventory_controller.dart';
 import '../../features/inventory/data/repositories/inventory_repository.dart';
 import '../../features/inventory/data/repositories/item_details_repository.dart';
@@ -26,6 +29,7 @@ import 'not_found_view.dart';
 class AppRouter {
   AppRouter({
     required Duration previewLoadDelay,
+    DashboardRepository? dashboardRepository,
     AlertsRepository? alertsRepository,
     InventoryRepository? inventoryRepository,
     ItemDetailsRepository? itemDetailsRepository,
@@ -37,7 +41,19 @@ class AppRouter {
        alertsController = AlertsController(
          repository: alertsRepository ?? const PreviewAlertsRepository(),
        ),
+       dashboardController = DashboardController(
+         repository: dashboardRepository ?? const PreviewDashboardRepository(),
+       ),
        inventoryController = _createInventoryController(inventoryRepository) {
+    unawaited(
+      dashboardController.load(
+        delay:
+            dashboardRepository == null ||
+                dashboardRepository is PreviewDashboardRepository
+            ? previewLoadDelay
+            : Duration.zero,
+      ),
+    );
     unawaited(inventoryController.loadPreviewData(delay: previewLoadDelay));
     unawaited(
       alertsController.load(
@@ -51,6 +67,7 @@ class AppRouter {
   }
 
   final rootNavigatorKey = GlobalKey<NavigatorState>();
+  final DashboardController dashboardController;
   final InventoryController inventoryController;
   final AlertsController alertsController;
   final ItemDetailsRepository itemDetailsRepository;
@@ -74,13 +91,8 @@ class AppRouter {
               GoRoute(
                 path: AppRoutePaths.dashboard,
                 name: AppRouteNames.dashboard,
-                builder: (context, state) => DashboardView(
-                  metrics: PreviewData.dashboardMetrics,
-                  categories: PreviewData.categories,
-                  attentionItems: PreviewData.alertItems,
-                  recentMovements: PreviewData.reportMovements
-                      .take(3)
-                      .toList(growable: false),
+                builder: (context, state) => DashboardRouteView(
+                  controller: dashboardController,
                   onShowInventory: (category) =>
                       _showInventory(context, category),
                   onShowAlerts: () => context.goNamed(AppRouteNames.alerts),
@@ -278,6 +290,7 @@ class AppRouter {
 
   void dispose() {
     router.dispose();
+    dashboardController.dispose();
     inventoryController.dispose();
     alertsController.dispose();
     reportsController.dispose();
