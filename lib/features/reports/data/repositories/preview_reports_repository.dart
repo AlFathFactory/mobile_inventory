@@ -4,6 +4,7 @@ import '../../../../core/data/repositories/page.dart';
 import '../../model/report_filter.dart';
 import '../models/reports_data.dart';
 import '../models/reports_query.dart';
+import '../services/reports_remote_data_source.dart';
 import 'reports_repository.dart';
 
 class PreviewReportsRepository implements ReportsRepository {
@@ -50,4 +51,23 @@ class PreviewReportsRepository implements ReportsRepository {
 
   DateTime? _dateOnly(DateTime? value) =>
       value == null ? null : DateTime(value.year, value.month, value.day);
+
+  @override
+  Future<DataResult<ReportsFilterOptions>> fetchFilterOptions() async =>
+      DataSuccess(
+        ReportsFilterOptions(
+          categories:
+              PreviewData.reportMovements
+                  .map((movement) => movement.category)
+                  .toSet()
+                  .toList()
+                ..sort(),
+          projects:
+              PreviewData.reportMovements
+                  .map((movement) => movement.project)
+                  .toSet()
+                  .toList()
+                ..sort(),
+        ),
+      );
 }

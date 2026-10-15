@@ -163,4 +163,8 @@ class InventoryMovement {
   final String? partyName;
   final String? purchaseOrder;
   final String? note;
+
+  /// Stable route identity for movements backed by the live inventory view.
+  String? get itemRouteId =>
+      tableName == null || itemId == null ? null : '$tableName::$itemId';
 }

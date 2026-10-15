@@ -7,6 +7,7 @@ import 'features/dashboard/data/repositories/dashboard_repository_factory.dart';
 import 'features/inventory/data/repositories/inventory_repository_factory.dart';
 import 'features/inventory/data/repositories/item_details_repository_factory.dart';
 import 'features/inventory/data/repositories/movement_history_repository_factory.dart';
+import 'features/reports/data/repositories/reports_repository_factory.dart';
 
 export 'app.dart';
 
@@ -20,6 +21,7 @@ Future<void> main() async {
   final movementHistoryRepository = MovementHistoryRepositoryFactory.create(
     client,
   );
+  final reportsRepository = ReportsRepositoryFactory.create(client);
   runApp(
     MyApp(
       dashboardRepository: dashboardRepository,
@@ -27,6 +29,7 @@ Future<void> main() async {
       inventoryRepository: inventoryRepository,
       itemDetailsRepository: itemDetailsRepository,
       movementHistoryRepository: movementHistoryRepository,
+      reportsRepository: reportsRepository,
     ),
   );
 }

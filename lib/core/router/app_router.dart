@@ -20,6 +20,8 @@ import '../../features/inventory/model/inventory_item.dart';
 import '../../features/inventory/view/inventory_view.dart';
 import '../../features/inventory/view/item_details_route_view.dart';
 import '../../features/reports/controller/reports_controller.dart';
+import '../../features/reports/data/repositories/preview_reports_repository.dart';
+import '../../features/reports/data/repositories/reports_repository.dart';
 import '../../features/reports/view/reports_view.dart';
 import '../data/preview_data.dart';
 import 'app_shell.dart';
@@ -34,6 +36,7 @@ class AppRouter {
     InventoryRepository? inventoryRepository,
     ItemDetailsRepository? itemDetailsRepository,
     MovementHistoryRepository? movementHistoryRepository,
+    ReportsRepository? reportsRepository,
   }) : itemDetailsRepository =
            itemDetailsRepository ?? const PreviewInventoryRepository(),
        movementHistoryRepository =
@@ -44,7 +47,15 @@ class AppRouter {
        dashboardController = DashboardController(
          repository: dashboardRepository ?? const PreviewDashboardRepository(),
        ),
-       inventoryController = _createInventoryController(inventoryRepository) {
+       inventoryController = _createInventoryController(inventoryRepository),
+       reportsController = ReportsController.withRepository(
+         repository: reportsRepository ?? const PreviewReportsRepository(),
+         clock:
+             reportsRepository == null ||
+                 reportsRepository is PreviewReportsRepository
+             ? (() => DateTime(2026, 8, 16))
+             : DateTime.now,
+       ) {
     unawaited(
       dashboardController.load(
         delay:
@@ -64,6 +75,15 @@ class AppRouter {
             : Duration.zero,
       ),
     );
+    unawaited(
+      reportsController.load(
+        delay:
+            reportsRepository == null ||
+                reportsRepository is PreviewReportsRepository
+            ? previewLoadDelay
+            : Duration.zero,
+      ),
+    );
   }
 
   final rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -72,7 +92,7 @@ class AppRouter {
   final AlertsController alertsController;
   final ItemDetailsRepository itemDetailsRepository;
   final MovementHistoryRepository movementHistoryRepository;
-  final reportsController = ReportsController(PreviewData.reportMovements);
+  final ReportsController reportsController;
   bool _isOpeningItem = false;
 
   late final GoRouter router = GoRouter(

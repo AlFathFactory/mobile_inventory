@@ -8,6 +8,7 @@ import 'features/dashboard/data/repositories/dashboard_repository.dart';
 import 'features/inventory/data/repositories/inventory_repository.dart';
 import 'features/inventory/data/repositories/item_details_repository.dart';
 import 'features/inventory/data/repositories/movement_history_repository.dart';
+import 'features/reports/data/repositories/reports_repository.dart';
 
 class MyApp extends StatefulWidget {
   const MyApp({
@@ -18,6 +19,7 @@ class MyApp extends StatefulWidget {
     this.inventoryRepository,
     this.itemDetailsRepository,
     this.movementHistoryRepository,
+    this.reportsRepository,
   });
 
   final Duration previewLoadDelay;
@@ -26,6 +28,7 @@ class MyApp extends StatefulWidget {
   final InventoryRepository? inventoryRepository;
   final ItemDetailsRepository? itemDetailsRepository;
   final MovementHistoryRepository? movementHistoryRepository;
+  final ReportsRepository? reportsRepository;
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -39,6 +42,7 @@ class _MyAppState extends State<MyApp> {
     inventoryRepository: widget.inventoryRepository,
     itemDetailsRepository: widget.itemDetailsRepository,
     movementHistoryRepository: widget.movementHistoryRepository,
+    reportsRepository: widget.reportsRepository,
   );
 
   @override
