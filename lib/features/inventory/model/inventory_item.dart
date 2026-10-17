@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../core/data/inventory_category_names.dart';
 import '../../../core/data/json_map_reader.dart';
 
 enum StockStatus { safe, low, outOfStock }
@@ -58,7 +59,9 @@ class InventoryItem {
     return InventoryItem(
       code: internalCode ?? codeNumber ?? itemKey ?? '$tableName:$itemId',
       name: JsonMapReader.string(json, 'item_name'),
-      category: JsonMapReader.string(json, 'category_name'),
+      category: InventoryCategoryNames.displayNameFor(
+        JsonMapReader.string(json, 'category_name'),
+      ),
       // The unified view does not currently expose category_id.
       categoryId: null,
       project: JsonMapReader.nullableString(json, 'project_name') ?? '',

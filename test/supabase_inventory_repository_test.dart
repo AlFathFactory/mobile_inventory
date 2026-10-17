@@ -27,6 +27,7 @@ void main() {
       expect(item.itemId, '00000000-0000-0000-0000-000000000007');
       expect(item.itemKey, 'item-7');
       expect(item.categoryId, isNull);
+      expect(item.category, 'مستهلكات');
       expect(item.code, 'CN-7');
       expect(item.quantity, 1.5);
       expect(item.minimum, 1.5);
@@ -34,6 +35,29 @@ void main() {
       expect(
         item.routeId,
         'inventory_items::00000000-0000-0000-0000-000000000007',
+      );
+    });
+
+    test('maps every legacy category key to its Arabic view name', () {
+      const expectedNames = {
+        'consumables': 'مستهلكات',
+        'paints': 'الدهانات',
+        'screws': 'مسامير',
+        'stock_screws': 'مسامير استوك',
+        'raw_materials': 'خامات',
+      };
+
+      for (final entry in expectedNames.entries) {
+        final item = InventoryItem.fromInventorySummaryRow(
+          _row(index: 1, categoryName: entry.key),
+        );
+        expect(item.category, entry.value);
+      }
+      expect(
+        InventoryItem.fromInventorySummaryRow(
+          _row(index: 2, categoryName: 'اختبار'),
+        ).category,
+        'اختبار',
       );
     });
   });
@@ -47,7 +71,7 @@ void main() {
             page: PageRequest(limit: 20, cursor: '40'),
             search: ' P-100,(unsafe)* ',
             statuses: {StockStatus.low, StockStatus.outOfStock},
-            categories: {'Paint', 'Consumables'},
+            categories: {'الدهانات', 'مستهلكات'},
             projects: {'Project B', 'Project A'},
           ),
         );
@@ -57,7 +81,7 @@ void main() {
         expect(plan.fetchLimit, 21);
         expect(plan.rangeEnd, 60);
         expect(plan.search, 'P-100 unsafe');
-        expect(plan.categories, ['Consumables', 'Paint']);
+        expect(plan.categories, ['الدهانات', 'مستهلكات']);
         expect(plan.projects, ['Project A', 'Project B']);
         expect(plan.statuses, ['قليل', 'منتهي']);
         expect(InventoryRemoteQuery.searchColumns, [
@@ -172,12 +196,13 @@ Map<String, dynamic> _row({
   required int index,
   Object stockBalance = 10,
   Object minimum = 2,
+  String categoryName = 'consumables',
   String? internalCode = 'INT-1',
   String? codeNumber,
 }) {
   return {
     'table_name': 'inventory_items',
-    'category_name': 'Consumables',
+    'category_name': categoryName,
     'item_id': '00000000-0000-0000-0000-${index.toString().padLeft(12, '0')}',
     'item_key': 'item-$index',
     'project_name': 'Project A',

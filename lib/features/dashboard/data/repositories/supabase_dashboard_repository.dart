@@ -1,5 +1,6 @@
 import '../../../../core/data/repositories/data_result.dart';
 import '../../../../core/data/services/supabase_failure_mapper.dart';
+import '../../../../core/data/inventory_category_names.dart';
 import '../../../inventory/model/inventory_item.dart';
 import '../../../inventory/model/inventory_movement.dart';
 import '../../model/dashboard_models.dart';
@@ -75,7 +76,7 @@ class SupabaseDashboardRepository implements DashboardRepository {
 
     final legacyCounts = summary['category_counts'];
     if (legacyCounts is Map) {
-      for (final entry in _legacyCategoryLabels.entries) {
+      for (final entry in InventoryCategoryNames.legacyDisplayNames.entries) {
         final count = _numericCount(legacyCounts[entry.key]);
         if (count == null) continue;
         // `name` deliberately uses the value exposed by
@@ -115,14 +116,6 @@ class SupabaseDashboardRepository implements DashboardRepository {
     }
     return List.unmodifiable(parsed);
   }
-
-  static const _legacyCategoryLabels = <String, String>{
-    'consumables': 'مستهلكات',
-    'paints': 'الدهانات',
-    'screws': 'مسامير',
-    'stock_screws': 'مسامير استوك',
-    'raw_materials': 'خامات',
-  };
 
   static int _count(Map<String, dynamic> json, List<String> keys) {
     for (final key in keys) {
