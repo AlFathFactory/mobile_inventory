@@ -16,46 +16,75 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
   group('dashboard live summary mapping', () {
-    test('maps RPC metrics and legacy plus dynamic categories', () async {
-      final source = _FakeDashboardSource(
-        summary: {
-          'total_items': 2038,
-          'low_stock': 2,
-          'out_of_stock': 650,
-          'categories': [
-            {'name': 'الدهانات', 'item_count': 86, 'attention_count': 4},
-            {
-              'category_id': '11111111-1111-1111-1111-111111111111',
-              'category_name': 'مخزن الكهرباء',
-              'total_items': 63,
-              'low_count': 1,
+    test(
+      'maps RPC metrics and merges legacy plus dynamic categories',
+      () async {
+        final source = _FakeDashboardSource(
+          summary: {
+            'total_items': 2038,
+            'low_stock': 2,
+            'out_of_stock': 650,
+            'category_counts': {
+              'consumables': 1223,
+              'paints': 53.0,
+              'screws': 479,
+              'stock_screws': 33,
+              'raw_materials': 266,
             },
-          ],
-        },
-      );
-      final repository = SupabaseDashboardRepository(source);
+            'dynamic_category_counts': [
+              {
+                'category_id': '11111111-1111-1111-1111-111111111111',
+                'category_name': 'اختبار',
+                'row_count': 1,
+              },
+            ],
+          },
+        );
+        final repository = SupabaseDashboardRepository(source);
 
-      final result = await repository.fetchDashboard();
-      final data = (result as DataSuccess).value as DashboardData;
+        final result = await repository.fetchDashboard();
+        final data = (result as DataSuccess).value as DashboardData;
 
-      expect(data.metrics.map((metric) => '${metric.label}:${metric.value}'), [
-        'إجمالي الأصناف:2038',
-        'مخزون منخفض:2',
-        'نفد المخزون:650',
-      ]);
-      expect(data.categories, hasLength(2));
-      expect(data.categories[0].id, isNull);
-      expect(data.categories[0].name, 'الدهانات');
-      expect(data.categories[0].itemCount, 86);
-      expect(data.categories[1].id, '11111111-1111-1111-1111-111111111111');
-      expect(data.categories[1].attentionCount, 1);
-    });
+        expect(
+          data.metrics.map((metric) => '${metric.label}:${metric.value}'),
+          ['إجمالي الأصناف:2038', 'مخزون منخفض:2', 'نفد المخزون:650'],
+        );
+        expect(data.categories, hasLength(6));
+        expect(data.categories.map((category) => category.name), [
+          'مستهلكات',
+          'الدهانات',
+          'مسامير',
+          'مسامير استوك',
+          'خامات',
+          'اختبار',
+        ]);
+        expect(data.categories.map((category) => category.itemCount), [
+          1223,
+          53,
+          479,
+          33,
+          266,
+          1,
+        ]);
+        expect(
+          data.categories.take(5).every((category) => category.id == null),
+          isTrue,
+        );
+        expect(data.categories.last.id, '11111111-1111-1111-1111-111111111111');
+      },
+    );
 
-    test('tolerates missing RPC keys and nameless categories', () async {
+    test('tolerates missing, empty, and malformed category sections', () async {
       final source = _FakeDashboardSource(
         summary: {
-          'categories': [
-            {'item_count': 5},
+          'category_counts': {},
+          'dynamic_category_counts': [
+            {'category_name': 'Missing id', 'row_count': 5},
+            {
+              'category_id': '22222222-2222-2222-2222-222222222222',
+              'row_count': 2,
+            },
+            'not a category',
           ],
         },
       );
@@ -66,6 +95,14 @@ void main() {
 
       expect(data.metrics.map((metric) => metric.value), [0, 0, 0]);
       expect(data.categories, isEmpty);
+    });
+
+    test('tolerates a response with no category sections', () async {
+      final result = await SupabaseDashboardRepository(
+        _FakeDashboardSource(),
+      ).fetchDashboard();
+
+      expect((result as DataSuccess).value.categories, isEmpty);
     });
   });
 
@@ -251,11 +288,30 @@ void main() {
   });
 
   group('DashboardRouteView', () {
-    testWidgets('renders preview dashboard and forwards category taps', (
+    testWidgets('renders merged category cards and forwards Arabic filters', (
       tester,
     ) async {
       final controller = DashboardController(
-        repository: const PreviewDashboardRepository(),
+        repository: SupabaseDashboardRepository(
+          _FakeDashboardSource(
+            summary: {
+              'category_counts': {
+                'consumables': 1223,
+                'paints': 53,
+                'screws': 479,
+                'stock_screws': 33,
+                'raw_materials': 266,
+              },
+              'dynamic_category_counts': [
+                {
+                  'category_id': '11111111-1111-1111-1111-111111111111',
+                  'category_name': 'اختبار',
+                  'row_count': 1,
+                },
+              ],
+            },
+          ),
+        ),
       );
       addTearDown(controller.dispose);
 
@@ -274,11 +330,24 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('إجمالي الأصناف'), findsOneWidget);
-      expect(find.text('الدهانات'), findsWidgets);
+      expect(find.byKey(const Key('dashboard-categories')), findsOneWidget);
+      for (final category in const ['مستهلكات', 'الدهانات', 'مسامير']) {
+        expect(find.text(category), findsOneWidget);
+      }
 
       await tester.tap(find.text('الدهانات').first);
       await tester.pumpAndSettle();
       expect(openedCategory, 'الدهانات');
+
+      await tester.scrollUntilVisible(
+        find.text('اختبار'),
+        150,
+        scrollable: find.descendant(
+          of: find.byKey(const Key('dashboard-categories')),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      expect(find.text('اختبار'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 

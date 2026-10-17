@@ -71,56 +71,71 @@ class SupabaseDashboardRepository implements DashboardRepository {
   }
 
   List<CategorySummary> _categories(Map<String, dynamic> summary) {
-    final raw = summary['categories'];
-    if (raw is! List) return const [];
     final parsed = <CategorySummary>[];
-    for (final entry in raw) {
-      if (entry is! Map) continue;
-      final row = Map<String, dynamic>.from(entry);
-      final name = _text(row, const ['name', 'category_name']);
-      if (name == null) continue;
-      parsed.add(
-        CategorySummary(
-          id: _text(row, const ['id', 'category_id', 'uuid']),
-          name: name,
-          itemCount: _count(row, const [
-            'item_count',
-            'items_count',
-            'total_items',
-            'total',
-            'count',
-          ]),
-          attentionCount: _count(row, const [
-            'attention_count',
-            'attention',
-            'low_count',
-            'alerts_count',
-          ]),
-        ),
-      );
+
+    final legacyCounts = summary['category_counts'];
+    if (legacyCounts is Map) {
+      for (final entry in _legacyCategoryLabels.entries) {
+        final count = _numericCount(legacyCounts[entry.key]);
+        if (count == null) continue;
+        // `name` deliberately uses the value exposed by
+        // inventory_category_items_summary_view.category_name. Dashboard
+        // navigation passes it unchanged to the server-side category filter.
+        parsed.add(
+          CategorySummary(
+            name: entry.value,
+            itemCount: count,
+            attentionCount: 0,
+          ),
+        );
+      }
+    }
+
+    final dynamicCounts = summary['dynamic_category_counts'];
+    if (dynamicCounts is List) {
+      for (final entry in dynamicCounts) {
+        if (entry is! Map) continue;
+        final id = entry['category_id'];
+        final name = entry['category_name'];
+        final count = _numericCount(entry['row_count']);
+        if (id is! String || id.isEmpty || name is! String || name.isEmpty) {
+          continue;
+        }
+        if (count == null) continue;
+
+        parsed.add(
+          CategorySummary(
+            id: id,
+            name: name,
+            itemCount: count,
+            attentionCount: 0,
+          ),
+        );
+      }
     }
     return List.unmodifiable(parsed);
   }
 
-  static String? _text(Map<String, dynamic> json, List<String> keys) {
-    for (final key in keys) {
-      final value = json[key];
-      if (value is String && value.isNotEmpty) return value;
-      if (value is num) return value.toString();
-    }
-    return null;
-  }
+  static const _legacyCategoryLabels = <String, String>{
+    'consumables': 'مستهلكات',
+    'paints': 'الدهانات',
+    'screws': 'مسامير',
+    'stock_screws': 'مسامير استوك',
+    'raw_materials': 'خامات',
+  };
 
   static int _count(Map<String, dynamic> json, List<String> keys) {
     for (final key in keys) {
-      final value = json[key];
-      if (value is int) return value;
-      if (value is num) return value.toInt();
-      if (value is String) {
-        final parsed = num.tryParse(value);
-        if (parsed != null) return parsed.toInt();
-      }
+      final count = _numericCount(json[key]);
+      if (count != null) return count;
     }
     return 0;
+  }
+
+  static int? _numericCount(Object? value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return num.tryParse(value)?.toInt();
+    return null;
   }
 }
