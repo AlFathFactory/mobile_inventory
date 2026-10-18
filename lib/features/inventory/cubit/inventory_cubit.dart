@@ -70,6 +70,11 @@ class InventoryCubit extends Cubit<InventoryState> {
       case DataError(:final failure):
         emit(state.copyWith(failure: failure, isLoading: false));
     }
+    final categories = await repository.fetchCategories();
+    if (isClosed || revision != _requestRevision) return;
+    if (categories case DataSuccess(:final value)) {
+      emit(state.copyWith(categories: value));
+    }
   }
 
   void setQuery(String value) {
@@ -173,6 +178,11 @@ class InventoryCubit extends Cubit<InventoryState> {
             ? const <InventoryItem>[]
             : state.items;
         emit(state.copyWith(items: items, failure: failure, isLoading: false));
+    }
+    final categories = await _repository.fetchCategories();
+    if (isClosed || revision != _requestRevision) return;
+    if (categories case DataSuccess(:final value)) {
+      emit(state.copyWith(categories: value));
     }
   }
 

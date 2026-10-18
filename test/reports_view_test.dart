@@ -4,7 +4,6 @@ import 'package:el_fateh/features/inventory/model/inventory_movement.dart';
 import 'package:el_fateh/features/reports/cubit/reports_cubit.dart';
 import 'package:el_fateh/features/reports/model/report_filter.dart';
 import 'package:el_fateh/features/reports/view/reports_view.dart';
-import 'package:el_fateh/features/reports/widgets/report_date_range_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -28,8 +27,8 @@ void main() {
 
     expect(find.text('التقارير'), findsOneWidget);
     expect(find.byKey(const Key('reports-overview')), findsOneWidget);
-    // Total appears once in the header badge and once in the overview.
-    expect(find.text('128'), findsNWidgets(2));
+    // The header trailing badge remains intentionally commented out.
+    expect(find.text('128'), findsOneWidget);
     expect(find.text('هيمباريم 500 × 16 لتر رال 7032'), findsOneWidget);
     expect(find.text('سلك لحام ٣.٢ مم'), findsOneWidget);
     expect(find.text('كابل كهرباء ٢.٥ مم'), findsOneWidget);
@@ -89,49 +88,6 @@ void main() {
 
     expect(find.text('سلك لحام ٣.٢ مم'), findsOneWidget);
     expect(find.text('كابل كهرباء ٢.٥ مم'), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('reports period selector switches preset periods', (
-    tester,
-  ) async {
-    final controller = ReportsController(PreviewData.reportMovements);
-    addTearDown(controller.dispose);
-
-    await tester.pumpWidget(_pumpReports(controller));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const ValueKey('reports-period-آخر 30 يوم')));
-    await tester.pumpAndSettle();
-    expect(controller.period, ReportPeriod.last30Days);
-    expect(find.text('سلك لحام ٣.٢ مم'), findsOneWidget);
-
-    await tester.tap(find.byKey(const ValueKey('reports-period-الكل')));
-    await tester.pumpAndSettle();
-    expect(controller.period, ReportPeriod.all);
-    expect(find.text('كابل كهرباء ٢.٥ مم'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('reports custom period opens the date picker', (tester) async {
-    // Phone-sized surface: the date dialog is designed for handset heights
-    // (it also overflows by 3px on the 800x600 desktop test surface
-    // without any redesign changes).
-    tester.view.devicePixelRatio = 1;
-    tester.view.physicalSize = const Size(392, 812);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    addTearDown(tester.view.resetPhysicalSize);
-
-    final controller = ReportsController(PreviewData.reportMovements);
-    addTearDown(controller.dispose);
-
-    await tester.pumpWidget(_pumpReports(controller));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const ValueKey('reports-period-مخصص')));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(ReportDateRangePicker), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

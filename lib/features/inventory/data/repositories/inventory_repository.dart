@@ -7,4 +7,7 @@ abstract interface class InventoryRepository {
   Future<DataResult<PageResult<InventoryItem>>> fetchItems(
     InventoryQuery query,
   );
+
+  Future<DataResult<List<String>>> fetchCategories() async =>
+      const DataSuccess([]);
 }

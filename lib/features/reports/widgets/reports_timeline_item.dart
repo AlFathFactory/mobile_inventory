@@ -15,11 +15,13 @@ class ReportsTimelineItem extends StatelessWidget {
   const ReportsTimelineItem({
     required this.movement,
     required this.showConnector,
+    this.onTap,
     super.key,
   });
 
   final InventoryMovement movement;
   final bool showConnector;
+  final VoidCallback? onTap;
 
   String get _signedQuantity {
     final value = movement.quantity.abs();
@@ -35,81 +37,88 @@ class ReportsTimelineItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          MovementRail(type: movement.type, showConnector: showConnector),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(bottom: showConnector ? 16 : 4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              MovementRail(type: movement.type, showConnector: showConnector),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: showConnector ? 16 : 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          movement.itemName,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.cardTitle,
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              movement.itemName,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.cardTitle,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            _signedQuantity,
+                            textDirection: TextDirection.ltr,
+                            style: AppTextStyles.number.copyWith(
+                              color: movement.type.color,
+                              fontSize: 17,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        _signedQuantity,
-                        textDirection: TextDirection.ltr,
-                        style: AppTextStyles.number.copyWith(
-                          color: movement.type.color,
-                          fontSize: 17,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Directionality(
-                    textDirection: TextDirection.ltr,
-                    child: Text(
-                      movement.itemCode,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.code,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Text(
-                        movement.type.label,
-                        style: AppTextStyles.caption.copyWith(
-                          color: movement.type.color,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 5),
-                        child: Text('·', style: AppTextStyles.caption),
-                      ),
+                      const SizedBox(height: 2),
                       Directionality(
                         textDirection: TextDirection.ltr,
-                        child: Text(_date, style: AppTextStyles.caption),
+                        child: Text(
+                          movement.itemCode,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.code,
+                        ),
                       ),
+                      const SizedBox(height: 4),
+                      Wrap(
+                        spacing: 5,
+                        runSpacing: 2,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(
+                            movement.type.label,
+                            style: AppTextStyles.caption.copyWith(
+                              color: movement.type.color,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const Text('·', style: AppTextStyles.caption),
+                          Directionality(
+                            textDirection: TextDirection.ltr,
+                            child: Text(_date, style: AppTextStyles.caption),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 7),
+                      QuantityTransition(
+                        before: movement.before,
+                        after: movement.after,
+                      ),
+                      const SizedBox(height: 7),
+                      MovementMetadata(movement: movement),
                     ],
                   ),
-                  const SizedBox(height: 7),
-                  QuantityTransition(
-                    before: movement.before,
-                    after: movement.after,
-                  ),
-                  const SizedBox(height: 7),
-                  MovementMetadata(movement: movement),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

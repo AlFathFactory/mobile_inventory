@@ -12,6 +12,16 @@ class SupabaseInventoryRepository implements InventoryRepository {
   final InventoryRemoteDataSource _dataSource;
 
   @override
+  Future<DataResult<List<String>>> fetchCategories() async {
+    try {
+      final categories = await _dataSource.fetchCategories();
+      return DataSuccess(categories);
+    } on Object catch (error) {
+      return DataError(SupabaseFailureMapper.from(error));
+    }
+  }
+
+  @override
   Future<DataResult<PageResult<InventoryItem>>> fetchItems(
     InventoryQuery query,
   ) async {

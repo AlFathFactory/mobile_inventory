@@ -12,7 +12,7 @@ class InventoryHeader extends StatelessWidget {
     return PageHeader(
       title: 'المخزون',
       subtitle: 'تصفّح الأصناف وتابع حالة توفرها',
-      trailing: PageCountBadge(value: totalCount, label: 'صنف'),
+      // trailing: PageCountBadge(value: totalCount, label: 'صنف'),
     );
   }
 }

@@ -12,7 +12,7 @@ class ReportsHeader extends StatelessWidget {
     return PageHeader(
       title: 'التقارير',
       subtitle: 'استكشف حركة المخزون واتجاهاتها',
-      trailing: PageCountBadge(value: totalCount, label: 'حركة'),
+      // trailing: PageCountBadge(value: totalCount, label: 'حركة'),
     );
   }
 }

@@ -16,6 +16,7 @@ class ReportsState {
     this.dateRange,
     this.project,
     this.category,
+    this.query = '',
     this.projects = const [],
     this.categories = const [],
     this.nextCursor,
@@ -30,6 +31,7 @@ class ReportsState {
   final DateTimeRange? dateRange;
   final String? project;
   final String? category;
+  final String query;
   final List<String> projects;
   final List<String> categories;
   final String? nextCursor;
@@ -40,7 +42,8 @@ class ReportsState {
       period != ReportPeriod.all ||
       selectedType != null ||
       project != null ||
-      category != null;
+      category != null ||
+      query.isNotEmpty;
   int get activeFilterCount =>
       (period != ReportPeriod.all ? 1 : 0) +
       (selectedType != null ? 1 : 0) +
@@ -61,6 +64,8 @@ class ReportsState {
     bool clearProject = false,
     String? category,
     bool clearCategory = false,
+    String? query,
+    bool clearQuery = false,
     List<String>? projects,
     List<String>? categories,
     String? nextCursor,
@@ -76,6 +81,7 @@ class ReportsState {
     dateRange: clearDateRange ? null : (dateRange ?? this.dateRange),
     project: clearProject ? null : (project ?? this.project),
     category: clearCategory ? null : (category ?? this.category),
+    query: clearQuery ? '' : (query ?? this.query),
     projects: projects ?? this.projects,
     categories: categories ?? this.categories,
     nextCursor: clearNextCursor ? null : (nextCursor ?? this.nextCursor),

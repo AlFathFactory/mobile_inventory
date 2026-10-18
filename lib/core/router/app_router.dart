@@ -18,6 +18,7 @@ import '../../features/inventory/data/repositories/item_details_repository.dart'
 import '../../features/inventory/data/repositories/movement_history_repository.dart';
 import '../../features/inventory/data/repositories/preview_inventory_repository.dart';
 import '../../features/inventory/model/inventory_item.dart';
+import '../../features/inventory/model/inventory_movement.dart';
 import '../../features/inventory/view/inventory_view.dart';
 import '../../features/inventory/view/item_details_route_view.dart';
 import '../../features/reports/cubit/reports_cubit.dart';
@@ -201,7 +202,9 @@ class AppRouter {
                 name: AppRouteNames.reports,
                 builder: (context, state) => BlocProvider.value(
                   value: reportsCubit,
-                  child: const ReportsView(),
+                  child: ReportsView(onOpenMovement: (movement) {
+                    _openMovement(context, movement);
+                  }),
                 ),
               ),
             ],
@@ -253,6 +256,23 @@ class AppRouter {
         .pushNamed<void>(
           AppRouteNames.itemDetails,
           pathParameters: {'code': item.routeId},
+          extra: _originRouteFor(context),
+        )
+        .then<void>(
+          (_) => _isOpeningItem = false,
+          onError: (_, _) => _isOpeningItem = false,
+        );
+  }
+
+  void _openMovement(BuildContext context, InventoryMovement movement) {
+    final routeId = movement.itemRouteId;
+    if (routeId == null || _isOpeningItem) return;
+    FocusManager.instance.primaryFocus?.unfocus();
+    _isOpeningItem = true;
+    context
+        .pushNamed<void>(
+          AppRouteNames.itemDetails,
+          pathParameters: {'code': routeId},
           extra: _originRouteFor(context),
         )
         .then<void>(

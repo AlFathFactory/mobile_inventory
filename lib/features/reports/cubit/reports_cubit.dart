@@ -37,6 +37,7 @@ class ReportsCubit extends Cubit<ReportsState> {
   final List<InventoryMovement>? _preview;
   final DateTime Function() _clock;
   final int pageSize;
+  Timer? _searchTimer;
   int _revision = 0;
   MovementType? get selectedType => state.selectedType;
   ReportPeriod get period => state.period;
@@ -49,6 +50,7 @@ class ReportsCubit extends Cubit<ReportsState> {
   bool get hasActiveFilters => state.hasActiveFilters;
   bool get isLoadingMore => state.isLoadingMore;
   bool get hasMore => state.hasMore;
+  String get query => state.query;
   DataFailure? get failure => state.failure;
   ReportSnapshot get snapshot => state.snapshot;
   Future<void> load({Duration delay = Duration.zero}) async {
@@ -103,6 +105,28 @@ class ReportsCubit extends Cubit<ReportsState> {
     }
   }
 
+  void setQuery(String value) {
+    if (state.query == value) return;
+    _searchTimer?.cancel();
+    _revision++;
+    emit(
+      state.copyWith(
+        query: value,
+        clearNextCursor: true,
+        clearFailure: true,
+        isLoadingMore: false,
+      ),
+    );
+    if (_preview != null) {
+      _applyPreviewQuery();
+    } else {
+      _searchTimer = Timer(
+        const Duration(milliseconds: 300),
+        () => unawaited(_reload()),
+      );
+    }
+  }
+
   void clearFilters() {
     if (!state.hasActiveFilters) return;
     _changed(
@@ -112,6 +136,7 @@ class ReportsCubit extends Cubit<ReportsState> {
         clearDateRange: true,
         clearProject: true,
         clearCategory: true,
+        clearQuery: true,
       ),
     );
   }
@@ -131,7 +156,12 @@ class ReportsCubit extends Cubit<ReportsState> {
       final rows = preview
           .where((row) {
             final date = DateUtils.dateOnly(row.date);
-            return (query.types.isEmpty || query.types.contains(row.type)) &&
+            final search = state.query.trim().toLowerCase();
+            return (search.isEmpty ||
+                    row.itemName.toLowerCase().contains(search) ||
+                    row.itemCode.toLowerCase().contains(search) ||
+                    row.project.toLowerCase().contains(search)) &&
+                (query.types.isEmpty || query.types.contains(row.type)) &&
                 (query.categories.isEmpty ||
                     query.categories.contains(row.category)) &&
                 (query.projects.isEmpty ||
@@ -149,6 +179,31 @@ class ReportsCubit extends Cubit<ReportsState> {
     } else {
       unawaited(_reload());
     }
+  }
+
+  void _applyPreviewQuery() {
+    final preview = _preview;
+    if (preview == null) return;
+    final query = _query();
+    final search = state.query.trim().toLowerCase();
+    final rows = preview.where((row) {
+      final date = DateUtils.dateOnly(row.date);
+      return (search.isEmpty ||
+              row.itemName.toLowerCase().contains(search) ||
+              row.itemCode.toLowerCase().contains(search) ||
+              row.project.toLowerCase().contains(search)) &&
+          (query.types.isEmpty || query.types.contains(row.type)) &&
+          (query.categories.isEmpty || query.categories.contains(row.category)) &&
+          (query.projects.isEmpty || query.projects.contains(row.project)) &&
+          (query.startDate == null || !date.isBefore(query.startDate!)) &&
+          (query.endDate == null || !date.isAfter(query.endDate!));
+    }).toList(growable: false);
+    emit(
+      state.copyWith(
+        movements: rows,
+        status: rows.isEmpty ? DataLoadStatus.empty : DataLoadStatus.success,
+      ),
+    );
   }
 
   Future<void> _reload() async {
@@ -230,6 +285,7 @@ class ReportsCubit extends Cubit<ReportsState> {
     types: state.selectedType == null ? const {} : {state.selectedType!},
     categories: state.category == null ? const {} : {state.category!},
     projects: state.project == null ? const {} : {state.project!},
+    search: state.query,
     startDate: state.period == ReportPeriod.last30Days
         ? DateUtils.dateOnly(_clock().subtract(const Duration(days: 30)))
         : state.period == ReportPeriod.custom
@@ -243,6 +299,7 @@ class ReportsCubit extends Cubit<ReportsState> {
   );
   @override
   Future<void> close() {
+    _searchTimer?.cancel();
     _revision++;
     return super.close();
   }

@@ -17,6 +17,13 @@ class PreviewInventoryRepository
   const PreviewInventoryRepository();
 
   @override
+  Future<DataResult<List<String>>> fetchCategories() async =>
+      DataSuccess(
+        PreviewData.catalogItems.map((item) => item.category).toSet().toList()
+          ..sort(),
+      );
+
+  @override
   Future<DataResult<PageResult<InventoryItem>>> fetchItems(
     InventoryQuery query,
   ) async {

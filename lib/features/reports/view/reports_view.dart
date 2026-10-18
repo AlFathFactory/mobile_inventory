@@ -4,34 +4,49 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/data/repositories/load_state.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/widgets/responsive_page.dart';
+import '../../inventory/model/inventory_movement.dart';
 import '../cubit/reports_cubit.dart';
 import '../cubit/reports_state.dart';
-import '../widgets/report_date_range_picker.dart';
 import '../widgets/report_filters.dart';
 import '../widgets/reports_empty_state.dart';
 import '../widgets/reports_header.dart';
 import '../widgets/reports_movement_list.dart';
 import '../widgets/reports_overview.dart';
-import '../widgets/reports_period_selector.dart';
 import '../widgets/reports_results_header.dart';
+import '../widgets/reports_search_toolbar.dart';
 
-class ReportsView extends StatelessWidget {
-  const ReportsView({this.controller, super.key});
+class ReportsView extends StatefulWidget {
+  const ReportsView({this.controller, this.onOpenMovement, super.key});
   final ReportsCubit? controller;
-  Future<void> _pick(BuildContext context) async {
-    final cubit = context.read<ReportsCubit>();
-    final value = await showReportDateRangePicker(
-      context: context,
-      initialRange: cubit.state.dateRange,
-    );
-    if (value != null) cubit.selectDateRange(value);
+  final ValueChanged<InventoryMovement>? onOpenMovement;
+
+  @override
+  State<ReportsView> createState() => _ReportsViewState();
+}
+
+class _ReportsViewState extends State<ReportsView> {
+  late final TextEditingController _searchController = TextEditingController(
+    text: _cubit.state.query,
+  );
+
+  ReportsCubit get _cubit => widget.controller ?? context.read<ReportsCubit>();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    _cubit.setQuery('');
   }
 
   @override
-  Widget build(BuildContext context) => controller == null
+  Widget build(BuildContext context) => widget.controller == null
       ? _content(context)
       : BlocProvider.value(
-          value: controller!,
+          value: widget.controller!,
           child: Builder(builder: _content),
         );
 
@@ -56,12 +71,19 @@ class ReportsView extends StatelessWidget {
                     const SizedBox(height: AppDimensions.space16),
                     ReportsOverview(snapshot: state.snapshot),
                     const SizedBox(height: AppDimensions.space12),
-                    ReportsPeriodSelector(
-                      period: state.period,
-                      hasCustomRange: state.dateRange != null,
-                      onSelectPeriod: cubit.selectPeriod,
-                      onPickCustom: () => _pick(context),
+                    ReportsSearchToolbar(
+                      controller: _searchController,
+                      showClear: state.query.isNotEmpty,
+                      onChanged: cubit.setQuery,
+                      onClear: _clearSearch,
                     ),
+                    // const SizedBox(height: AppDimensions.space12),
+                    // ReportsPeriodSelector(
+                    //   period: state.period,
+                    //   hasCustomRange: state.dateRange != null,
+                    //   onSelectPeriod: cubit.selectPeriod,
+                    //   onPickCustom: () => _pick(context),
+                    // ),
                     const SizedBox(height: AppDimensions.space12),
                     ReportFilters(controller: cubit),
                     const SizedBox(height: AppDimensions.space16),
@@ -91,7 +113,10 @@ class ReportsView extends StatelessWidget {
                 )
               else
                 SliverToBoxAdapter(
-                  child: ReportsMovementList(movements: movements),
+                  child: ReportsMovementList(
+                    movements: movements,
+                    onTap: widget.onOpenMovement,
+                  ),
                 ),
               if (state.isLoadingMore)
                 const SliverToBoxAdapter(

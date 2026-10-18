@@ -109,4 +109,8 @@ class _FakeInventoryRepository implements InventoryRepository {
   Future<DataResult<PageResult<InventoryItem>>> fetchItems(
     InventoryQuery query,
   ) async => _fetch(query);
+
+  @override
+  Future<DataResult<List<String>>> fetchCategories() async =>
+      const DataSuccess([]);
 }

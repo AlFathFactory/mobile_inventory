@@ -9,68 +9,68 @@ import '../model/report_filter.dart';
 ///
 /// Custom-range picking itself stays in the existing date dialog; the
 /// controller logic is untouched.
-class ReportsPeriodSelector extends StatelessWidget {
-  const ReportsPeriodSelector({
-    required this.period,
-    required this.hasCustomRange,
-    required this.onSelectPeriod,
-    required this.onPickCustom,
-    super.key,
-  });
+// class ReportsPeriodSelector extends StatelessWidget {
+//   const ReportsPeriodSelector({
+//     required this.period,
+//     required this.hasCustomRange,
+//     required this.onSelectPeriod,
+//     required this.onPickCustom,
+//     super.key,
+//   });
 
-  final ReportPeriod period;
-  final bool hasCustomRange;
-  final ValueChanged<ReportPeriod> onSelectPeriod;
-  final VoidCallback onPickCustom;
+//   final ReportPeriod period;
+//   final bool hasCustomRange;
+//   final ValueChanged<ReportPeriod> onSelectPeriod;
+//   final VoidCallback onPickCustom;
 
-  @override
-  Widget build(BuildContext context) {
-    final hasSelectedCustomRange =
-        period == ReportPeriod.custom && hasCustomRange;
+//   @override
+//   Widget build(BuildContext context) {
+//     final hasSelectedCustomRange =
+//         period == ReportPeriod.custom && hasCustomRange;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppColors.surfaceMuted,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
-        border: Border.all(color: AppColors.divider),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppDimensions.space4),
-        child: Row(
-          children: [
-            Expanded(
-              child: _PeriodSegment(
-                key: const ValueKey('reports-period-الكل'),
-                label: 'الكل',
-                selected: period == ReportPeriod.all,
-                onTap: () => onSelectPeriod(ReportPeriod.all),
-              ),
-            ),
-            const SizedBox(width: AppDimensions.space4),
-            Expanded(
-              child: _PeriodSegment(
-                key: const ValueKey('reports-period-آخر 30 يوم'),
-                label: 'آخر 30 يوم',
-                selected: period == ReportPeriod.last30Days,
-                onTap: () => onSelectPeriod(ReportPeriod.last30Days),
-              ),
-            ),
-            const SizedBox(width: AppDimensions.space4),
-            Expanded(
-              child: _PeriodSegment(
-                key: const ValueKey('reports-period-مخصص'),
-                label: 'مخصص',
-                selected: hasSelectedCustomRange,
-                dot: hasSelectedCustomRange,
-                onTap: onPickCustom,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+//     return DecoratedBox(
+//       decoration: BoxDecoration(
+//         color: AppColors.surfaceMuted,
+//         borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
+//         border: Border.all(color: AppColors.divider),
+//       ),
+//       child: Padding(
+//         padding: const EdgeInsets.all(AppDimensions.space4),
+//         child: Row(
+//           children: [
+//             Expanded(
+//               child: _PeriodSegment(
+//                 key: const ValueKey('reports-period-الكل'),
+//                 label: 'الكل',
+//                 selected: period == ReportPeriod.all,
+//                 onTap: () => onSelectPeriod(ReportPeriod.all),
+//               ),
+//             ),
+//             const SizedBox(width: AppDimensions.space4),
+//             Expanded(
+//               child: _PeriodSegment(
+//                 key: const ValueKey('reports-period-آخر 30 يوم'),
+//                 label: 'آخر 30 يوم',
+//                 selected: period == ReportPeriod.last30Days,
+//                 onTap: () => onSelectPeriod(ReportPeriod.last30Days),
+//               ),
+//             ),
+//             const SizedBox(width: AppDimensions.space4),
+//             Expanded(
+//               child: _PeriodSegment(
+//                 key: const ValueKey('reports-period-مخصص'),
+//                 label: 'مخصص',
+//                 selected: hasSelectedCustomRange,
+//                 dot: hasSelectedCustomRange,
+//                 onTap: onPickCustom,
+//               ),
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+// }
 
 class _PeriodSegment extends StatelessWidget {
   const _PeriodSegment({

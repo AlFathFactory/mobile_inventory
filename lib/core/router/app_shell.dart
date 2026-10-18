@@ -27,7 +27,9 @@ class AppShell extends StatelessWidget {
         }
       },
       child: Scaffold(
+        extendBody: true,
         body: SafeArea(
+          bottom: false,
           child: BlocBuilder<InventoryCubit, InventoryState>(
             bloc: inventoryCubit,
             buildWhen: (previous, current) =>

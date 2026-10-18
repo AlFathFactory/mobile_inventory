@@ -117,4 +117,6 @@ extension StockStatusSummaryViewValue on StockStatus {
 
 abstract interface class InventoryRemoteDataSource {
   Future<List<Map<String, dynamic>>> fetchItems(InventoryRemoteQuery query);
+
+  Future<List<String>> fetchCategories() async => const [];
 }

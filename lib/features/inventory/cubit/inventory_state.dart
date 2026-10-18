@@ -16,7 +16,9 @@ class InventoryState {
     this.query = '',
     this.quickStatus,
     this.filter = const InventoryFilter(),
-  }) : items = List.unmodifiable(items);
+    List<String> categories = const [],
+  }) : items = List.unmodifiable(items),
+       categoryOptions = List.unmodifiable(categories);
 
   final List<InventoryItem> items;
   final bool isServerBacked;
@@ -27,11 +29,14 @@ class InventoryState {
   final String query;
   final StockStatus? quickStatus;
   final InventoryFilter filter;
+  final List<String> categoryOptions;
 
   bool get hasMore => nextCursor != null;
-  List<String> get categories =>
-      items.map((item) => item.category).toSet().toList(growable: false)
-        ..sort();
+  List<String> get categories {
+    if (categoryOptions.isNotEmpty) return categoryOptions;
+    return items.map((item) => item.category).toSet().toList(growable: false)
+      ..sort();
+  }
   List<String> get projects =>
       items
           .map((item) => item.project)
@@ -70,6 +75,7 @@ class InventoryState {
     StockStatus? quickStatus,
     bool clearQuickStatus = false,
     InventoryFilter? filter,
+    List<String>? categories,
   }) => InventoryState(
     items: items ?? this.items,
     isServerBacked: isServerBacked,
@@ -80,5 +86,6 @@ class InventoryState {
     query: query ?? this.query,
     quickStatus: clearQuickStatus ? null : (quickStatus ?? this.quickStatus),
     filter: filter ?? this.filter,
+    categories: categories ?? categoryOptions,
   );
 }

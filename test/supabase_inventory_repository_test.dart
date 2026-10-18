@@ -235,4 +235,7 @@ class _FakeInventorySource implements InventoryRemoteDataSource {
     if (error case final error?) throw error;
     return rows;
   }
+
+  @override
+  Future<List<String>> fetchCategories() async => const [];
 }

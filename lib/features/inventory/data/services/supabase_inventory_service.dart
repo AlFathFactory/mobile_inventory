@@ -8,6 +8,26 @@ class SupabaseInventoryService implements InventoryRemoteDataSource {
   final SupabaseClient _client;
 
   @override
+  Future<List<String>> fetchCategories() async {
+    final categories = <String>[];
+    String? last;
+    for (var index = 0; index < 100; index++) {
+      final rows = await _client
+          .from(InventoryRemoteQuery.viewName)
+          .select('category_name')
+          .gt('category_name', last ?? '')
+          .order('category_name')
+          .limit(1);
+      if (rows.isEmpty) break;
+      final name = (rows.single as Map)['category_name'];
+      if (name is! String || name.isEmpty) break;
+      categories.add(name);
+      last = name;
+    }
+    return categories;
+  }
+
+  @override
   Future<List<Map<String, dynamic>>> fetchItems(
     InventoryRemoteQuery query,
   ) async {

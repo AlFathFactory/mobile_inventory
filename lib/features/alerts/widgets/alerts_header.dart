@@ -13,12 +13,12 @@ class AlertsHeader extends StatelessWidget {
     return PageHeader(
       title: 'تنبيهات المخزون',
       subtitle: 'تابع الأصناف التي تحتاج انتباهك',
-      trailing: PageCountBadge(
-        value: totalCount,
-        label: 'تحتاج انتباه',
-        foreground: AppColors.low,
-        background: AppColors.lowSoft,
-      ),
+      // trailing: PageCountBadge(
+      //   value: totalCount,
+      //   label: 'تحتاج انتباه',
+      //   foreground: AppColors.low,
+      //   background: AppColors.lowSoft,
+      // ),
     );
   }
 }
