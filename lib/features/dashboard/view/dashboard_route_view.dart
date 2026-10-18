@@ -1,58 +1,41 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../core/data/repositories/load_state.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/widgets/app_components.dart';
-import '../controller/dashboard_controller.dart';
+import '../cubit/dashboard_cubit.dart';
+import '../cubit/dashboard_state.dart';
 import 'dashboard_view.dart';
 
-/// Composition root for the Dashboard tab: owns the controller, maps its
-/// load state onto loading/failure/data UI, and keeps `DashboardView`
+/// Maps Cubit state onto loading/failure/data UI and keeps `DashboardView`
 /// purely presentational.
-class DashboardRouteView extends StatefulWidget {
+class DashboardRouteView extends StatelessWidget {
   const DashboardRouteView({
-    required this.controller,
     required this.onShowInventory,
     required this.onShowAlerts,
     required this.onShowReports,
     super.key,
   });
 
-  final DashboardController controller;
   final ValueChanged<String?> onShowInventory;
   final VoidCallback onShowAlerts;
   final VoidCallback onShowReports;
 
   @override
-  State<DashboardRouteView> createState() => _DashboardRouteViewState();
-}
-
-class _DashboardRouteViewState extends State<DashboardRouteView> {
-  @override
-  void initState() {
-    super.initState();
-    unawaited(widget.controller.load());
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: widget.controller,
-      builder: (context, _) {
-        final state = widget.controller.state;
+    return BlocBuilder<DashboardCubit, DashboardState>(
+      builder: (context, state) {
         return switch (state.status) {
-          DataLoadStatus.success => DashboardView(
+          DashboardStatus.success => DashboardView(
             metrics: state.data!.metrics,
             categories: state.data!.categories,
             attentionItems: state.data!.attentionItems,
             recentMovements: state.data!.recentMovements,
-            onShowInventory: widget.onShowInventory,
-            onShowAlerts: widget.onShowAlerts,
-            onShowReports: widget.onShowReports,
+            onShowInventory: onShowInventory,
+            onShowAlerts: onShowAlerts,
+            onShowReports: onShowReports,
           ),
-          DataLoadStatus.failure => Scaffold(
+          DashboardStatus.failure => Scaffold(
             body: SafeArea(
               child: ResponsivePage(
                 child: Column(
@@ -66,7 +49,7 @@ class _DashboardRouteViewState extends State<DashboardRouteView> {
                     const SizedBox(height: AppDimensions.space12),
                     TextButton.icon(
                       key: const Key('retry-dashboard'),
-                      onPressed: widget.controller.load,
+                      onPressed: context.read<DashboardCubit>().retry,
                       icon: const Icon(Icons.refresh_rounded),
                       label: const Text('إعادة المحاولة'),
                     ),
@@ -75,9 +58,7 @@ class _DashboardRouteViewState extends State<DashboardRouteView> {
               ),
             ),
           ),
-          DataLoadStatus.initial ||
-          DataLoadStatus.loading ||
-          DataLoadStatus.empty => const Scaffold(
+          DashboardStatus.initial || DashboardStatus.loading => const Scaffold(
             body: SafeArea(child: Center(child: CircularProgressIndicator())),
           ),
         };

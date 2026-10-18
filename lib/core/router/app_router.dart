@@ -8,7 +8,7 @@ import '../../features/alerts/cubit/alerts_cubit.dart';
 import '../../features/alerts/data/repositories/alerts_repository.dart';
 import '../../features/alerts/data/repositories/preview_alerts_repository.dart';
 import '../../features/alerts/view/alerts_view.dart';
-import '../../features/dashboard/controller/dashboard_controller.dart';
+import '../../features/dashboard/cubit/dashboard_cubit.dart';
 import '../../features/dashboard/data/repositories/dashboard_repository.dart';
 import '../../features/dashboard/data/repositories/preview_dashboard_repository.dart';
 import '../../features/dashboard/view/dashboard_route_view.dart';
@@ -45,7 +45,7 @@ class AppRouter {
        alertsCubit = AlertsCubit(
          repository: alertsRepository ?? const PreviewAlertsRepository(),
        ),
-       dashboardController = DashboardController(
+       dashboardCubit = DashboardCubit(
          repository: dashboardRepository ?? const PreviewDashboardRepository(),
        ),
        inventoryController = _createInventoryController(inventoryRepository),
@@ -58,7 +58,7 @@ class AppRouter {
              : DateTime.now,
        ) {
     unawaited(
-      dashboardController.load(
+      dashboardCubit.load(
         delay:
             dashboardRepository == null ||
                 dashboardRepository is PreviewDashboardRepository
@@ -88,7 +88,7 @@ class AppRouter {
   }
 
   final rootNavigatorKey = GlobalKey<NavigatorState>();
-  final DashboardController dashboardController;
+  final DashboardCubit dashboardCubit;
   final InventoryController inventoryController;
   final AlertsCubit alertsCubit;
   final ItemDetailsRepository itemDetailsRepository;
@@ -112,12 +112,14 @@ class AppRouter {
               GoRoute(
                 path: AppRoutePaths.dashboard,
                 name: AppRouteNames.dashboard,
-                builder: (context, state) => DashboardRouteView(
-                  controller: dashboardController,
-                  onShowInventory: (category) =>
-                      _showInventory(context, category),
-                  onShowAlerts: () => context.goNamed(AppRouteNames.alerts),
-                  onShowReports: () => context.goNamed(AppRouteNames.reports),
+                builder: (context, state) => BlocProvider.value(
+                  value: dashboardCubit,
+                  child: DashboardRouteView(
+                    onShowInventory: (category) =>
+                        _showInventory(context, category),
+                    onShowAlerts: () => context.goNamed(AppRouteNames.alerts),
+                    onShowReports: () => context.goNamed(AppRouteNames.reports),
+                  ),
                 ),
               ),
             ],
@@ -313,7 +315,7 @@ class AppRouter {
 
   void dispose() {
     router.dispose();
-    dashboardController.dispose();
+    dashboardCubit.close();
     inventoryController.dispose();
     alertsCubit.close();
     reportsController.dispose();

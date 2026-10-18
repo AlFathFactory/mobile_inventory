@@ -1,6 +1,6 @@
 import 'package:el_fateh/core/data/repositories/data_result.dart';
 import 'package:el_fateh/core/theme/app_theme.dart';
-import 'package:el_fateh/features/dashboard/controller/dashboard_controller.dart';
+import 'package:el_fateh/features/dashboard/cubit/dashboard_cubit.dart';
 import 'package:el_fateh/features/dashboard/data/models/dashboard_data.dart';
 import 'package:el_fateh/features/dashboard/data/repositories/dashboard_repository.dart';
 import 'package:el_fateh/features/dashboard/data/repositories/dashboard_repository_factory.dart';
@@ -10,6 +10,7 @@ import 'package:el_fateh/features/dashboard/data/services/dashboard_remote_data_
 import 'package:el_fateh/features/dashboard/view/dashboard_route_view.dart';
 import 'package:el_fateh/features/inventory/model/inventory_item.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -259,14 +260,16 @@ void main() {
     );
   });
 
-  group('DashboardController', () {
+  group('DashboardCubit', () {
     test('loads successfully through the repository contract', () async {
-      final controller = DashboardController(
+      final cubit = DashboardCubit(
         repository: const PreviewDashboardRepository(),
       );
-      addTearDown(controller.dispose);
+      addTearDown(cubit.close);
 
-      await controller.load();
+      await cubit.load();
+
+      final controller = cubit;
 
       expect(controller.data, isNotNull);
       expect(controller.data!.metrics.first.label, 'إجمالي الأصناف');
@@ -275,15 +278,15 @@ void main() {
 
     test('surfaces failure and recovers on retry', () async {
       final repository = _ToggleDashboardRepository();
-      final controller = DashboardController(repository: repository);
-      addTearDown(controller.dispose);
+      final cubit = DashboardCubit(repository: repository);
+      addTearDown(cubit.close);
 
-      await controller.load();
-      expect(controller.data, isNull);
+      await cubit.load();
+      expect(cubit.state.data, isNull);
 
       repository.shouldFail = false;
-      await controller.load();
-      expect(controller.data, isNotNull);
+      await cubit.retry();
+      expect(cubit.state.data, isNotNull);
     });
   });
 
@@ -291,7 +294,7 @@ void main() {
     testWidgets('renders merged category cards and forwards Arabic filters', (
       tester,
     ) async {
-      final controller = DashboardController(
+      final cubit = DashboardCubit(
         repository: SupabaseDashboardRepository(
           _FakeDashboardSource(
             summary: {
@@ -313,17 +316,20 @@ void main() {
           ),
         ),
       );
-      addTearDown(controller.dispose);
+      addTearDown(cubit.close);
+      await cubit.load();
 
       String? openedCategory;
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.light,
-          home: DashboardRouteView(
-            controller: controller,
-            onShowInventory: (category) => openedCategory = category,
-            onShowAlerts: () {},
-            onShowReports: () {},
+          home: BlocProvider.value(
+            value: cubit,
+            child: DashboardRouteView(
+              onShowInventory: (category) => openedCategory = category,
+              onShowAlerts: () {},
+              onShowReports: () {},
+            ),
           ),
         ),
       );
@@ -353,17 +359,20 @@ void main() {
 
     testWidgets('shows retry on failure and recovers', (tester) async {
       final repository = _ToggleDashboardRepository();
-      final controller = DashboardController(repository: repository);
-      addTearDown(controller.dispose);
+      final cubit = DashboardCubit(repository: repository);
+      addTearDown(cubit.close);
+      await cubit.load();
 
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.light,
-          home: DashboardRouteView(
-            controller: controller,
-            onShowInventory: (_) {},
-            onShowAlerts: () {},
-            onShowReports: () {},
+          home: BlocProvider.value(
+            value: cubit,
+            child: DashboardRouteView(
+              onShowInventory: (_) {},
+              onShowAlerts: () {},
+              onShowReports: () {},
+            ),
           ),
         ),
       );
