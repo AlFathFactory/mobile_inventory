@@ -1,46 +1,42 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/data/repositories/data_result.dart';
 import '../../../core/data/repositories/load_state.dart';
 import '../data/repositories/item_details_repository.dart';
 import '../model/inventory_item.dart';
 
-class ItemDetailsController extends ChangeNotifier {
-  ItemDetailsController({
+class ItemDetailsCubit extends Cubit<DataLoadState<InventoryItem>> {
+  ItemDetailsCubit({
     required ItemDetailsRepository repository,
     required String routeId,
   }) : _repository = repository,
-       _routeId = routeId;
+       _routeId = routeId,
+       super(const DataLoadState.initial());
 
   final ItemDetailsRepository _repository;
   final String _routeId;
-  DataLoadState<InventoryItem> _state = const DataLoadState.initial();
   int _requestRevision = 0;
-
-  DataLoadState<InventoryItem> get state => _state;
 
   Future<void> load() async {
     final revision = ++_requestRevision;
-    _state = DataLoadState.loading(previousData: _state.data);
-    notifyListeners();
-
+    emit(DataLoadState.loading(previousData: state.data));
     final result = await _repository.fetchItemByRouteId(_routeId);
-    if (revision != _requestRevision) return;
-
-    _state = switch (result) {
+    if (isClosed || revision != _requestRevision) return;
+    emit(switch (result) {
       DataSuccess(value: final item?) => DataLoadState.success(item),
       DataSuccess() => const DataLoadState.empty(),
       DataError(:final failure) => DataLoadState.failed(
         failure,
-        previousData: _state.data,
+        previousData: state.data,
       ),
-    };
-    notifyListeners();
+    });
   }
 
+  Future<void> retry() => load();
+
   @override
-  void dispose() {
+  Future<void> close() {
     _requestRevision++;
-    super.dispose();
+    return super.close();
   }
 }

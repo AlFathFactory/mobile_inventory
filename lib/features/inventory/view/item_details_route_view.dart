@@ -1,15 +1,17 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/data/repositories/load_state.dart';
 import '../../../core/router/not_found_view.dart';
 import '../../../core/widgets/app_components.dart';
-import '../controller/item_details_controller.dart';
-import '../controller/movement_history_controller.dart';
+import '../cubit/item_details_cubit.dart';
+import '../cubit/movement_history_cubit.dart';
 import '../data/repositories/item_details_repository.dart';
 import '../data/repositories/movement_history_repository.dart';
 import '../model/inventory_item.dart';
+import '../model/inventory_movement.dart';
 import 'item_details_view.dart';
 import 'movement_history_view.dart';
 
@@ -32,7 +34,7 @@ class ItemDetailsRouteView extends StatefulWidget {
 }
 
 class _ItemDetailsRouteViewState extends State<ItemDetailsRouteView> {
-  late final ItemDetailsController _controller = ItemDetailsController(
+  late final ItemDetailsCubit _controller = ItemDetailsCubit(
     repository: widget.repository,
     routeId: widget.routeId,
   );
@@ -45,16 +47,16 @@ class _ItemDetailsRouteViewState extends State<ItemDetailsRouteView> {
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller.close();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: _controller,
-      builder: (context, _) => _ItemRouteState(
-        state: _controller.state,
+    return BlocBuilder<ItemDetailsCubit, DataLoadState<InventoryItem>>(
+      bloc: _controller,
+      builder: (context, state) => _ItemRouteState(
+        state: state,
         onRetry: _controller.load,
         onSuccess: (item) => _ItemDetailsWithMovements(
           item: item,
@@ -87,13 +89,13 @@ class ItemHistoryRouteView extends StatefulWidget {
 }
 
 class _ItemHistoryRouteViewState extends State<ItemHistoryRouteView> {
-  ItemDetailsController? _controller;
+  ItemDetailsCubit? _controller;
 
   @override
   void initState() {
     super.initState();
     if (widget.initialItem == null) {
-      _controller = ItemDetailsController(
+      _controller = ItemDetailsCubit(
         repository: widget.repository,
         routeId: widget.routeId,
       );
@@ -103,7 +105,7 @@ class _ItemHistoryRouteViewState extends State<ItemHistoryRouteView> {
 
   @override
   void dispose() {
-    _controller?.dispose();
+    _controller?.close();
     super.dispose();
   }
 
@@ -119,10 +121,10 @@ class _ItemHistoryRouteViewState extends State<ItemHistoryRouteView> {
       );
     }
 
-    return ListenableBuilder(
-      listenable: _controller!,
-      builder: (context, _) => _ItemRouteState(
-        state: _controller!.state,
+    return BlocBuilder<ItemDetailsCubit, DataLoadState<InventoryItem>>(
+      bloc: _controller!,
+      builder: (context, state) => _ItemRouteState(
+        state: state,
         onRetry: _controller!.load,
         onSuccess: (item) => _MovementHistoryLoader(
           item: item,
@@ -152,7 +154,7 @@ class _ItemDetailsWithMovements extends StatefulWidget {
 }
 
 class _ItemDetailsWithMovementsState extends State<_ItemDetailsWithMovements> {
-  late final MovementHistoryController _controller = MovementHistoryController(
+  late final MovementHistoryCubit _controller = MovementHistoryCubit(
     repository: widget.repository,
     item: widget.item,
     pageSize: 2,
@@ -166,17 +168,20 @@ class _ItemDetailsWithMovementsState extends State<_ItemDetailsWithMovements> {
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller.close();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: _controller,
-      builder: (context, _) => ItemDetailsView(
+    return BlocBuilder<
+      MovementHistoryCubit,
+      DataLoadState<List<InventoryMovement>>
+    >(
+      bloc: _controller,
+      builder: (context, state) => ItemDetailsView(
         item: widget.item,
-        movements: _controller.state.data ?? const [],
+        movements: state.data ?? const [],
         onBack: widget.onBack,
       ),
     );
@@ -201,7 +206,7 @@ class _MovementHistoryLoader extends StatefulWidget {
 }
 
 class _MovementHistoryLoaderState extends State<_MovementHistoryLoader> {
-  late final MovementHistoryController _controller = MovementHistoryController(
+  late final MovementHistoryCubit _controller = MovementHistoryCubit(
     repository: widget.repository,
     item: widget.item,
   );
@@ -214,7 +219,7 @@ class _MovementHistoryLoaderState extends State<_MovementHistoryLoader> {
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller.close();
     super.dispose();
   }
 
@@ -232,32 +237,37 @@ class _MovementHistoryLoaderState extends State<_MovementHistoryLoader> {
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) widget.onBack();
       },
-      child: ListenableBuilder(
-        listenable: _controller,
-        builder: (context, _) {
-          final state = _controller.state;
-          final movements = state.data;
-          if (movements != null || state.status == DataLoadStatus.empty) {
-            return NotificationListener<ScrollNotification>(
-              onNotification: _onScroll,
-              child: MovementHistoryView(
-                item: widget.item,
-                movements: movements ?? const [],
-                onBack: widget.onBack,
-              ),
-            );
-          }
-          if (state.status == DataLoadStatus.failure) {
-            return _MovementFailureState(
-              message: state.failure!.message,
-              onRetry: _controller.load,
-            );
-          }
-          return const Scaffold(
-            body: SafeArea(child: Center(child: CircularProgressIndicator())),
-          );
-        },
-      ),
+      child:
+          BlocBuilder<
+            MovementHistoryCubit,
+            DataLoadState<List<InventoryMovement>>
+          >(
+            bloc: _controller,
+            builder: (context, state) {
+              final movements = state.data;
+              if (movements != null || state.status == DataLoadStatus.empty) {
+                return NotificationListener<ScrollNotification>(
+                  onNotification: _onScroll,
+                  child: MovementHistoryView(
+                    item: widget.item,
+                    movements: movements ?? const [],
+                    onBack: widget.onBack,
+                  ),
+                );
+              }
+              if (state.status == DataLoadStatus.failure) {
+                return _MovementFailureState(
+                  message: state.failure!.message,
+                  onRetry: _controller.load,
+                );
+              }
+              return const Scaffold(
+                body: SafeArea(
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+              );
+            },
+          ),
     );
   }
 }

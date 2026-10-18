@@ -1,7 +1,7 @@
 import 'package:el_fateh/core/data/preview_data.dart';
 import 'package:el_fateh/features/alerts/cubit/alerts_cubit.dart';
 import 'package:el_fateh/features/alerts/data/repositories/preview_alerts_repository.dart';
-import 'package:el_fateh/features/inventory/controller/inventory_controller.dart';
+import 'package:el_fateh/features/inventory/cubit/inventory_cubit.dart';
 import 'package:el_fateh/features/inventory/model/inventory_filter.dart';
 import 'package:el_fateh/features/inventory/model/inventory_item.dart';
 import 'package:el_fateh/features/inventory/model/inventory_movement.dart';
@@ -22,17 +22,17 @@ void main() {
     });
   });
 
-  group('InventoryController', () {
-    late InventoryController controller;
+  group('InventoryCubit', () {
+    late InventoryCubit controller;
 
     setUp(() {
-      controller = InventoryController(
+      controller = InventoryCubit(
         items: PreviewData.catalogItems,
         initiallyLoading: false,
       );
     });
 
-    tearDown(() => controller.dispose());
+    tearDown(() => controller.close());
 
     test('searches Arabic names and Latin item codes', () {
       controller.setQuery('مسامير');

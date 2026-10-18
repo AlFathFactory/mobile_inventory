@@ -12,7 +12,7 @@ import '../../features/dashboard/cubit/dashboard_cubit.dart';
 import '../../features/dashboard/data/repositories/dashboard_repository.dart';
 import '../../features/dashboard/data/repositories/preview_dashboard_repository.dart';
 import '../../features/dashboard/view/dashboard_route_view.dart';
-import '../../features/inventory/controller/inventory_controller.dart';
+import '../../features/inventory/cubit/inventory_cubit.dart';
 import '../../features/inventory/data/repositories/inventory_repository.dart';
 import '../../features/inventory/data/repositories/item_details_repository.dart';
 import '../../features/inventory/data/repositories/movement_history_repository.dart';
@@ -48,7 +48,7 @@ class AppRouter {
        dashboardCubit = DashboardCubit(
          repository: dashboardRepository ?? const PreviewDashboardRepository(),
        ),
-       inventoryController = _createInventoryController(inventoryRepository),
+       inventoryCubit = _createInventoryCubit(inventoryRepository),
        reportsController = ReportsController.withRepository(
          repository: reportsRepository ?? const PreviewReportsRepository(),
          clock:
@@ -66,7 +66,7 @@ class AppRouter {
             : Duration.zero,
       ),
     );
-    unawaited(inventoryController.loadPreviewData(delay: previewLoadDelay));
+    unawaited(inventoryCubit.loadPreviewData(delay: previewLoadDelay));
     unawaited(
       alertsCubit.load(
         delay:
@@ -89,7 +89,7 @@ class AppRouter {
 
   final rootNavigatorKey = GlobalKey<NavigatorState>();
   final DashboardCubit dashboardCubit;
-  final InventoryController inventoryController;
+  final InventoryCubit inventoryCubit;
   final AlertsCubit alertsCubit;
   final ItemDetailsRepository itemDetailsRepository;
   final MovementHistoryRepository movementHistoryRepository;
@@ -104,7 +104,7 @@ class AppRouter {
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) => AppShell(
           navigationShell: navigationShell,
-          loadingController: inventoryController,
+          inventoryCubit: inventoryCubit,
         ),
         branches: [
           StatefulShellBranch(
@@ -129,9 +129,11 @@ class AppRouter {
               GoRoute(
                 path: AppRoutePaths.inventory,
                 name: AppRouteNames.inventory,
-                builder: (context, state) => InventoryView(
-                  controller: inventoryController,
-                  onOpenItem: (item) => _openItem(context, item),
+                builder: (context, state) => BlocProvider.value(
+                  value: inventoryCubit,
+                  child: InventoryView(
+                    onOpenItem: (item) => _openItem(context, item),
+                  ),
                 ),
                 routes: [
                   GoRoute(
@@ -207,16 +209,14 @@ class AppRouter {
     ],
   );
 
-  static InventoryController _createInventoryController(
-    InventoryRepository? repository,
-  ) {
+  static InventoryCubit _createInventoryCubit(InventoryRepository? repository) {
     if (repository == null || repository is PreviewInventoryRepository) {
-      return InventoryController(
+      return InventoryCubit(
         items: PreviewData.catalogItems,
         repository: repository ?? const PreviewInventoryRepository(),
       );
     }
-    return InventoryController(
+    return InventoryCubit(
       items: PreviewData.catalogItems,
       repository: repository,
       serverBacked: true,
@@ -225,7 +225,7 @@ class AppRouter {
 
   InventoryItem? _findItem(String? routeId) {
     if (routeId == null) return null;
-    for (final item in inventoryController.allItems) {
+    for (final item in inventoryCubit.state.items) {
       if (item.routeId == routeId ||
           (!item.hasBackendIdentity && item.code == routeId)) {
         return item;
@@ -263,11 +263,11 @@ class AppRouter {
     // Dashboard data is local preview data, but tolerate a stale category if
     // this entry point is ever fed by a route or refreshed data source.
     if (category != null &&
-        (inventoryController.isServerBacked ||
-            inventoryController.categories.contains(category))) {
-      inventoryController.filterByCategory(category);
+        (inventoryCubit.state.isServerBacked ||
+            inventoryCubit.state.categories.contains(category))) {
+      inventoryCubit.filterByCategory(category);
     } else {
-      inventoryController.clearFilters(includeQuery: true);
+      inventoryCubit.clearFilters(includeQuery: true);
     }
     context.goNamed(AppRouteNames.inventory);
   }
@@ -316,7 +316,7 @@ class AppRouter {
   void dispose() {
     router.dispose();
     dashboardCubit.close();
-    inventoryController.dispose();
+    inventoryCubit.close();
     alertsCubit.close();
     reportsController.dispose();
   }

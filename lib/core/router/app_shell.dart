@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
-import '../../features/inventory/controller/inventory_controller.dart';
+import '../../features/inventory/cubit/inventory_cubit.dart';
+import '../../features/inventory/cubit/inventory_state.dart';
 import '../widgets/app_bottom_navigation.dart';
 
 class AppShell extends StatelessWidget {
   const AppShell({
     required this.navigationShell,
-    required this.loadingController,
+    required this.inventoryCubit,
     super.key,
   });
 
   final StatefulNavigationShell navigationShell;
-  final InventoryController loadingController;
+  final InventoryCubit inventoryCubit;
 
   @override
   Widget build(BuildContext context) {
@@ -26,13 +28,12 @@ class AppShell extends StatelessWidget {
       },
       child: Scaffold(
         body: SafeArea(
-          child: ListenableBuilder(
-            listenable: loadingController,
-            child: navigationShell,
-            builder: (context, child) => Skeletonizer(
-              enabled: loadingController.isLoading,
-              child: child!,
-            ),
+          child: BlocBuilder<InventoryCubit, InventoryState>(
+            bloc: inventoryCubit,
+            buildWhen: (previous, current) =>
+                previous.isLoading != current.isLoading,
+            builder: (context, state) =>
+                Skeletonizer(enabled: state.isLoading, child: navigationShell),
           ),
         ),
         bottomNavigationBar: AppBottomNavigation(

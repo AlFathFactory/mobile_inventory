@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/status_visuals.dart';
-import '../controller/inventory_controller.dart';
+import '../cubit/inventory_cubit.dart';
 import '../model/inventory_filter.dart';
 import '../model/inventory_item.dart';
 
-Future<void> showInventoryFilterSheet(
-  BuildContext context,
-  InventoryController controller,
-) {
+Future<void> showInventoryFilterSheet(BuildContext context) {
+  final cubit = context.read<InventoryCubit>();
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -19,23 +18,28 @@ Future<void> showInventoryFilterSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
     ),
-    builder: (context) => InventoryFilterSheet(controller: controller),
+    builder: (context) =>
+        BlocProvider.value(value: cubit, child: const InventoryFilterSheet()),
   );
 }
 
 class InventoryFilterSheet extends StatefulWidget {
-  const InventoryFilterSheet({required this.controller, super.key});
-
-  final InventoryController controller;
+  const InventoryFilterSheet({super.key});
 
   @override
   State<InventoryFilterSheet> createState() => _InventoryFilterSheetState();
 }
 
 class _InventoryFilterSheetState extends State<InventoryFilterSheet> {
-  late Set<StockStatus> _statuses = {...widget.controller.filter.statuses};
-  late Set<String> _categories = {...widget.controller.filter.categories};
-  late Set<String> _projects = {...widget.controller.filter.projects};
+  late Set<StockStatus> _statuses = {
+    ...context.read<InventoryCubit>().state.filter.statuses,
+  };
+  late Set<String> _categories = {
+    ...context.read<InventoryCubit>().state.filter.categories,
+  };
+  late Set<String> _projects = {
+    ...context.read<InventoryCubit>().state.filter.projects,
+  };
 
   InventoryFilter get _draft => InventoryFilter(
     statuses: _statuses,
@@ -43,7 +47,8 @@ class _InventoryFilterSheetState extends State<InventoryFilterSheet> {
     projects: _projects,
   );
 
-  int get _resultCount => widget.controller.resultCountFor(_draft);
+  int get _resultCount =>
+      context.read<InventoryCubit>().state.resultCountFor(_draft);
 
   void _toggle<T>(Set<T> values, T value, bool selected) {
     setState(() => selected ? values.add(value) : values.remove(value));
@@ -102,7 +107,7 @@ class _InventoryFilterSheetState extends State<InventoryFilterSheet> {
                 const SizedBox(height: 22),
                 _FilterSection<String>(
                   title: 'التصنيف',
-                  values: widget.controller.categories,
+                  values: context.read<InventoryCubit>().state.categories,
                   selectedValues: _categories,
                   labelFor: (value) => value,
                   onChanged: (value, selected) =>
@@ -111,7 +116,7 @@ class _InventoryFilterSheetState extends State<InventoryFilterSheet> {
                 const SizedBox(height: 22),
                 _FilterSection<String>(
                   title: 'المشروع',
-                  values: widget.controller.projects,
+                  values: context.read<InventoryCubit>().state.projects,
                   selectedValues: _projects,
                   labelFor: (value) => value,
                   onChanged: (value, selected) =>
@@ -149,7 +154,7 @@ class _InventoryFilterSheetState extends State<InventoryFilterSheet> {
                       child: FilledButton(
                         key: const Key('apply-inventory-filters'),
                         onPressed: () {
-                          widget.controller.applyFilters(_draft);
+                          context.read<InventoryCubit>().applyFilters(_draft);
                           Navigator.pop(context);
                         },
                         child: Text('عرض $_resultCount نتائج'),
