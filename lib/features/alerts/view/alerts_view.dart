@@ -1,12 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/responsive_page.dart';
 import '../../inventory/model/inventory_item.dart';
-import '../controller/alerts_controller.dart';
+import '../cubit/alerts_cubit.dart';
+import '../cubit/alerts_state.dart';
 import '../widgets/alert_item_card.dart';
 import '../widgets/alerts_empty_state.dart';
 import '../widgets/alerts_header.dart';
@@ -14,27 +16,21 @@ import '../widgets/alerts_overview.dart';
 import '../widgets/alerts_status_filters.dart';
 
 class AlertsView extends StatelessWidget {
-  const AlertsView({
-    required this.controller,
-    required this.onOpenItem,
-    super.key,
-  });
+  const AlertsView({required this.onOpenItem, super.key});
 
-  final AlertsController controller;
   final ValueChanged<InventoryItem> onOpenItem;
 
   @override
   Widget build(BuildContext context) {
     return ResponsivePage(
-      child: ListenableBuilder(
-        listenable: controller,
-        builder: (context, child) {
-          final items = controller.visibleItems;
-          final summary = controller.summary;
+      child: BlocBuilder<AlertsCubit, AlertsState>(
+        builder: (context, state) {
+          final items = state.items;
+          final summary = state.summary;
           return NotificationListener<ScrollNotification>(
             onNotification: (notification) {
               if (notification.metrics.extentAfter < 320) {
-                unawaited(controller.loadNextPage());
+                unawaited(context.read<AlertsCubit>().loadNextPage());
               }
               return false;
             },
@@ -52,8 +48,8 @@ class AlertsView extends StatelessWidget {
                       AlertsOverview(summary: summary),
                       const SizedBox(height: AppDimensions.space12),
                       AlertsStatusFilters(
-                        selected: controller.selectedStatus,
-                        onSelected: controller.selectStatus,
+                        selected: state.selectedStatus,
+                        onSelected: context.read<AlertsCubit>().selectStatus,
                       ),
                       const SizedBox(height: AppDimensions.space16),
                       Row(
@@ -77,9 +73,7 @@ class AlertsView extends StatelessWidget {
                 ),
                 if (items.isEmpty)
                   SliverToBoxAdapter(
-                    child: AlertsEmptyState(
-                      isFiltering: controller.isFiltering,
-                    ),
+                    child: AlertsEmptyState(isFiltering: state.isFiltering),
                   )
                 else
                   SliverList.separated(

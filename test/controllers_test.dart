@@ -1,5 +1,5 @@
 import 'package:el_fateh/core/data/preview_data.dart';
-import 'package:el_fateh/features/alerts/controller/alerts_controller.dart';
+import 'package:el_fateh/features/alerts/cubit/alerts_cubit.dart';
 import 'package:el_fateh/features/alerts/data/repositories/preview_alerts_repository.dart';
 import 'package:el_fateh/features/inventory/controller/inventory_controller.dart';
 import 'package:el_fateh/features/inventory/model/inventory_filter.dart';
@@ -81,18 +81,16 @@ void main() {
     });
   });
 
-  test('AlertsController filters the preview alerts', () async {
-    final controller = AlertsController(
-      repository: const PreviewAlertsRepository(),
-    );
-    addTearDown(controller.dispose);
+  test('AlertsCubit filters the preview alerts', () async {
+    final cubit = AlertsCubit(repository: const PreviewAlertsRepository());
+    addTearDown(cubit.close);
 
-    await controller.load();
-    await controller.selectStatus(StockStatus.outOfStock);
-    expect(controller.visibleItems.single.code, 'GS-OX-004');
+    await cubit.load();
+    await cubit.selectStatus(StockStatus.outOfStock);
+    expect(cubit.state.items.single.code, 'GS-OX-004');
 
-    await controller.selectStatus(StockStatus.low);
-    expect(controller.visibleItems, hasLength(3));
+    await cubit.selectStatus(StockStatus.low);
+    expect(cubit.state.items, hasLength(3));
   });
 
   test('ReportsController combines movement type and project filters', () {

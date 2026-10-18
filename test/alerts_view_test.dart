@@ -3,24 +3,25 @@ import 'dart:async';
 import 'package:el_fateh/app.dart';
 import 'package:el_fateh/core/data/preview_data.dart';
 import 'package:el_fateh/core/theme/app_theme.dart';
-import 'package:el_fateh/features/alerts/controller/alerts_controller.dart';
+import 'package:el_fateh/features/alerts/cubit/alerts_cubit.dart';
 import 'package:el_fateh/features/alerts/data/repositories/preview_alerts_repository.dart';
 import 'package:el_fateh/features/alerts/view/alerts_view.dart';
 import 'package:el_fateh/features/inventory/model/inventory_item.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-Widget _pumpAlerts(
-  AlertsController controller, {
-  ValueChanged<InventoryItem>? onOpen,
-}) {
-  unawaited(controller.load());
+Widget _pumpAlerts(AlertsCubit cubit, {ValueChanged<InventoryItem>? onOpen}) {
+  unawaited(cubit.load());
   return MaterialApp(
     theme: AppTheme.light,
     home: Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        body: AlertsView(controller: controller, onOpenItem: onOpen ?? (_) {}),
+        body: BlocProvider.value(
+          value: cubit,
+          child: AlertsView(onOpenItem: onOpen ?? (_) {}),
+        ),
       ),
     ),
   );
@@ -28,12 +29,10 @@ Widget _pumpAlerts(
 
 void main() {
   testWidgets('alerts shows summary counts and attention list', (tester) async {
-    final controller = AlertsController(
-      repository: const PreviewAlertsRepository(),
-    );
-    addTearDown(controller.dispose);
+    final cubit = AlertsCubit(repository: const PreviewAlertsRepository());
+    addTearDown(cubit.close);
 
-    await tester.pumpWidget(_pumpAlerts(controller));
+    await tester.pumpWidget(_pumpAlerts(cubit));
     await tester.pumpAndSettle();
 
     expect(find.text('تنبيهات المخزون'), findsOneWidget);
@@ -47,12 +46,10 @@ void main() {
   });
 
   testWidgets('alerts status filters narrow the list', (tester) async {
-    final controller = AlertsController(
-      repository: const PreviewAlertsRepository(),
-    );
-    addTearDown(controller.dispose);
+    final cubit = AlertsCubit(repository: const PreviewAlertsRepository());
+    addTearDown(cubit.close);
 
-    await tester.pumpWidget(_pumpAlerts(controller));
+    await tester.pumpWidget(_pumpAlerts(cubit));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('alerts-status-نفد')));
@@ -73,14 +70,12 @@ void main() {
   });
 
   testWidgets('tapping an alert item opens its details', (tester) async {
-    final controller = AlertsController(
-      repository: const PreviewAlertsRepository(),
-    );
-    addTearDown(controller.dispose);
+    final cubit = AlertsCubit(repository: const PreviewAlertsRepository());
+    addTearDown(cubit.close);
 
     InventoryItem? opened;
     await tester.pumpWidget(
-      _pumpAlerts(controller, onOpen: (item) => opened = item),
+      _pumpAlerts(cubit, onOpen: (item) => opened = item),
     );
     await tester.pumpAndSettle();
 
@@ -116,12 +111,12 @@ void main() {
   testWidgets('alerts shows a friendly state when stock is healthy', (
     tester,
   ) async {
-    final controller = AlertsController(
+    final cubit = AlertsCubit(
       repository: const PreviewAlertsRepository(items: []),
     );
-    addTearDown(controller.dispose);
+    addTearDown(cubit.close);
 
-    await tester.pumpWidget(_pumpAlerts(controller));
+    await tester.pumpWidget(_pumpAlerts(cubit));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('alerts-empty-state')), findsOneWidget);
@@ -133,17 +128,17 @@ void main() {
   testWidgets('alerts shows a no-match state for an empty filter', (
     tester,
   ) async {
-    final controller = AlertsController(
+    final cubit = AlertsCubit(
       repository: PreviewAlertsRepository(
         items: PreviewData.alertItems
             .where((item) => item.status == StockStatus.low)
             .toList(growable: false),
       ),
     );
-    addTearDown(controller.dispose);
+    addTearDown(cubit.close);
 
-    controller.selectStatus(StockStatus.outOfStock);
-    await tester.pumpWidget(_pumpAlerts(controller));
+    cubit.selectStatus(StockStatus.outOfStock);
+    await tester.pumpWidget(_pumpAlerts(cubit));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('alerts-empty-state')), findsOneWidget);
@@ -160,12 +155,10 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       addTearDown(tester.view.resetPhysicalSize);
 
-      final controller = AlertsController(
-        repository: const PreviewAlertsRepository(),
-      );
-      addTearDown(controller.dispose);
+      final cubit = AlertsCubit(repository: const PreviewAlertsRepository());
+      addTearDown(cubit.close);
 
-      await tester.pumpWidget(_pumpAlerts(controller));
+      await tester.pumpWidget(_pumpAlerts(cubit));
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);

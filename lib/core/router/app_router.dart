@@ -1,9 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/alerts/controller/alerts_controller.dart';
+import '../../features/alerts/cubit/alerts_cubit.dart';
 import '../../features/alerts/data/repositories/alerts_repository.dart';
 import '../../features/alerts/data/repositories/preview_alerts_repository.dart';
 import '../../features/alerts/view/alerts_view.dart';
@@ -41,7 +42,7 @@ class AppRouter {
            itemDetailsRepository ?? const PreviewInventoryRepository(),
        movementHistoryRepository =
            movementHistoryRepository ?? const PreviewInventoryRepository(),
-       alertsController = AlertsController(
+       alertsCubit = AlertsCubit(
          repository: alertsRepository ?? const PreviewAlertsRepository(),
        ),
        dashboardController = DashboardController(
@@ -67,7 +68,7 @@ class AppRouter {
     );
     unawaited(inventoryController.loadPreviewData(delay: previewLoadDelay));
     unawaited(
-      alertsController.load(
+      alertsCubit.load(
         delay:
             alertsRepository == null ||
                 alertsRepository is PreviewAlertsRepository
@@ -89,7 +90,7 @@ class AppRouter {
   final rootNavigatorKey = GlobalKey<NavigatorState>();
   final DashboardController dashboardController;
   final InventoryController inventoryController;
-  final AlertsController alertsController;
+  final AlertsCubit alertsCubit;
   final ItemDetailsRepository itemDetailsRepository;
   final MovementHistoryRepository movementHistoryRepository;
   final ReportsController reportsController;
@@ -180,9 +181,11 @@ class AppRouter {
               GoRoute(
                 path: AppRoutePaths.alerts,
                 name: AppRouteNames.alerts,
-                builder: (context, state) => AlertsView(
-                  controller: alertsController,
-                  onOpenItem: (item) => _openItem(context, item),
+                builder: (context, state) => BlocProvider.value(
+                  value: alertsCubit,
+                  child: AlertsView(
+                    onOpenItem: (item) => _openItem(context, item),
+                  ),
                 ),
               ),
             ],
@@ -312,7 +315,7 @@ class AppRouter {
     router.dispose();
     dashboardController.dispose();
     inventoryController.dispose();
-    alertsController.dispose();
+    alertsCubit.close();
     reportsController.dispose();
   }
 }
