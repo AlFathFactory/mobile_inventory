@@ -244,7 +244,7 @@ void main() {
     expect(requests.last.url.queryParameters['offset'], '2');
   });
 
-  test('filter options use bounded category keyset reads', () async {
+  test('filter options use the shared active category catalog', () async {
     final requests = <Request>[];
     final client = SupabaseClient(
       'https://example.supabase.co',
@@ -261,16 +261,12 @@ void main() {
             request: request,
           );
         }
-        final after = request.url.queryParameters['category_name'];
-        final rows = switch (after) {
-          'gt.' => [
-            {'category_name': 'Metals'},
-          ],
-          'gt.Metals' => [
-            {'category_name': 'Paints'},
-          ],
-          _ => <Map<String, String>>[],
-        };
+        final rows = [
+          {'name': 'اختبار'},
+          {'name': 'الدهانات'},
+          {'name': ''},
+          {'name': 'اختبار'},
+        ];
         return Response(
           jsonEncode(rows),
           200,
@@ -281,17 +277,25 @@ void main() {
     );
     addTearDown(client.dispose);
     final options = await SupabaseReportsService(client).fetchFilterOptions();
-    expect(options.categories, ['Metals', 'Paints']);
+    expect(options.categories, [
+      'مستهلكات',
+      'الدهانات',
+      'مسامير',
+      'مسامير استوك',
+      'خامات',
+      'اختبار',
+    ]);
     expect(options.projects, ['Project A']);
     final categoryRequests = requests.where(
-      (request) => request.url.path.endsWith('/inventory_item_movements_view'),
+      (request) => request.url.path.endsWith('/categories'),
     );
-    expect(categoryRequests, hasLength(3));
+    expect(categoryRequests, hasLength(1));
     expect(
       categoryRequests.every(
         (request) =>
-            request.url.queryParameters['select'] == 'category_name' &&
-            request.url.queryParameters['limit'] == '1',
+            request.url.queryParameters['select'] == 'name' &&
+            request.url.queryParameters['is_archived'] == 'eq.false' &&
+            request.url.queryParameters['order'] == 'name.asc.nullslast',
       ),
       isTrue,
     );

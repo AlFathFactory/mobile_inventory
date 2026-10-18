@@ -2,12 +2,18 @@ import 'dart:convert';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../../core/data/inventory_category_catalog.dart';
 import 'reports_remote_data_source.dart';
 
 class SupabaseReportsService implements ReportsRemoteDataSource {
-  SupabaseReportsService(this._client);
+  SupabaseReportsService(
+    this._client, {
+    InventoryCategoryCatalog? categoryCatalog,
+  }) : _categoryCatalog =
+           categoryCatalog ?? SupabaseInventoryCategoryCatalog(_client);
 
   final SupabaseClient _client;
+  final InventoryCategoryCatalog _categoryCatalog;
   String? _cachedFilterKey;
   int? _cachedTotal;
   Map<String, dynamic>? _cachedAggregate;
@@ -139,22 +145,7 @@ class SupabaseReportsService implements ReportsRemoteDataSource {
             .toList()
           ..sort();
 
-    // PostgREST does not expose SELECT DISTINCT. Advance one unique value at
-    // a time so no movement history is downloaded just to fill this menu.
-    final categories = <String>[];
-    String? last;
-    for (var index = 0; index < 100; index++) {
-      dynamic builder = _client
-          .from(ReportsRemoteQuery.viewName)
-          .select('category_name')
-          .gt('category_name', last ?? '');
-      final rows = await builder.order('category_name').limit(1) as List;
-      if (rows.isEmpty) break;
-      final name = (rows.single as Map)['category_name'];
-      if (name is! String || name.isEmpty) break;
-      categories.add(name);
-      last = name;
-    }
+    final categories = await _categoryCatalog.fetchCategories();
     return ReportsFilterOptions(categories: categories, projects: projects);
   }
 }

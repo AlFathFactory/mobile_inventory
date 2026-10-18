@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:el_fateh/core/data/repositories/data_result.dart';
 import 'package:el_fateh/core/data/repositories/page.dart';
 import 'package:el_fateh/features/inventory/data/models/inventory_query.dart';
@@ -5,9 +7,11 @@ import 'package:el_fateh/features/inventory/data/repositories/inventory_reposito
 import 'package:el_fateh/features/inventory/data/repositories/preview_inventory_repository.dart';
 import 'package:el_fateh/features/inventory/data/repositories/supabase_inventory_repository.dart';
 import 'package:el_fateh/features/inventory/data/services/inventory_remote_data_source.dart';
+import 'package:el_fateh/features/inventory/data/services/supabase_inventory_service.dart';
 import 'package:el_fateh/features/inventory/model/inventory_item.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart';
+import 'package:http/testing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
@@ -111,6 +115,58 @@ void main() {
       expect(result, isA<DataError<Object?>>());
       expect((result as DataError).failure.kind, DataFailureKind.unknown);
       expect(source.requests, isEmpty);
+    });
+  });
+
+  group('live inventory category catalog', () {
+    test('returns legacy categories plus valid unique dynamic names', () async {
+      final requests = <Request>[];
+      final client = SupabaseClient(
+        'https://example.supabase.co',
+        'sb_publishable_example',
+        httpClient: MockClient((request) async {
+          requests.add(request);
+          return Response(
+            jsonEncode([
+              {'name': 'اختبار'},
+              {'name': 'الدهانات'},
+              {'name': ''},
+              {'name': 'اختبار'},
+            ]),
+            200,
+            headers: {'content-type': 'application/json'},
+            request: request,
+          );
+        }),
+      );
+      addTearDown(client.dispose);
+
+      final categories = await SupabaseInventoryService(
+        client,
+      ).fetchCategories();
+
+      expect(categories, [
+        'مستهلكات',
+        'الدهانات',
+        'مسامير',
+        'مسامير استوك',
+        'خامات',
+        'اختبار',
+      ]);
+      expect(requests, hasLength(1));
+      expect(requests.single.url.path, endsWith('/categories'));
+      expect(
+        requests.single.url.queryParameters,
+        containsPair('select', 'name'),
+      );
+      expect(
+        requests.single.url.queryParameters,
+        containsPair('is_archived', 'eq.false'),
+      );
+      expect(
+        requests.single.url.queryParameters,
+        containsPair('order', 'name.asc.nullslast'),
+      );
     });
   });
 

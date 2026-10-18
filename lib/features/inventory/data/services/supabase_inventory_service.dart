@@ -1,30 +1,21 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../../core/data/inventory_category_catalog.dart';
 import 'inventory_remote_data_source.dart';
 
 class SupabaseInventoryService implements InventoryRemoteDataSource {
-  const SupabaseInventoryService(this._client);
+  SupabaseInventoryService(
+    this._client, {
+    InventoryCategoryCatalog? categoryCatalog,
+  }) : _categoryCatalog =
+           categoryCatalog ?? SupabaseInventoryCategoryCatalog(_client);
 
   final SupabaseClient _client;
+  final InventoryCategoryCatalog _categoryCatalog;
 
   @override
   Future<List<String>> fetchCategories() async {
-    final categories = <String>[];
-    String? last;
-    for (var index = 0; index < 100; index++) {
-      final rows = await _client
-          .from(InventoryRemoteQuery.viewName)
-          .select('category_name')
-          .gt('category_name', last ?? '')
-          .order('category_name')
-          .limit(1);
-      if (rows.isEmpty) break;
-      final name = (rows.single as Map)['category_name'];
-      if (name is! String || name.isEmpty) break;
-      categories.add(name);
-      last = name;
-    }
-    return categories;
+    return _categoryCatalog.fetchCategories();
   }
 
   @override

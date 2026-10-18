@@ -235,7 +235,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('report-movement-صرف')));
     await tester.pump();
-    await tester.tap(find.byKey(const Key('apply-report-filters')));
+    final applyFilters = find.byKey(const Key('apply-report-filters'));
+    tester.widget<FilledButton>(applyFilters).onPressed!();
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('clear-reports-inline')), findsOneWidget);
 

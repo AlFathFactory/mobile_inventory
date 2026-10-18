@@ -13,4 +13,20 @@ abstract final class InventoryCategoryNames {
   /// altering dynamic category names or values already supplied by the view.
   static String displayNameFor(String categoryName) =>
       legacyDisplayNames[categoryName] ?? categoryName;
+
+  /// Produces the single category order used by Dashboard, Inventory, and
+  /// Reports: legacy view-compatible names first, then dynamic names.
+  static List<String> mergeDynamicCategories(Iterable<Object?> dynamicNames) {
+    final categories = <String>[...legacyDisplayNames.values];
+    final seen = categories.toSet();
+    final dynamic = <String>[];
+    for (final value in dynamicNames) {
+      if (value is! String || value.trim().isEmpty || !seen.add(value)) {
+        continue;
+      }
+      dynamic.add(value);
+    }
+    dynamic.sort();
+    return List.unmodifiable([...categories, ...dynamic]);
+  }
 }

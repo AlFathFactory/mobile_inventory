@@ -93,6 +93,7 @@ class SupabaseDashboardRepository implements DashboardRepository {
     }
 
     final dynamicCounts = summary['dynamic_category_counts'];
+    final dynamicByName = <String, CategorySummary>{};
     if (dynamicCounts is List) {
       for (final entry in dynamicCounts) {
         if (entry is! Map) continue;
@@ -104,8 +105,9 @@ class SupabaseDashboardRepository implements DashboardRepository {
         }
         if (count == null) continue;
 
-        parsed.add(
-          CategorySummary(
+        dynamicByName.putIfAbsent(
+          name,
+          () => CategorySummary(
             id: id,
             name: name,
             itemCount: count,
@@ -113,6 +115,13 @@ class SupabaseDashboardRepository implements DashboardRepository {
           ),
         );
       }
+    }
+
+    final orderedDynamicNames = InventoryCategoryNames.mergeDynamicCategories(
+      dynamicByName.keys,
+    ).skip(InventoryCategoryNames.legacyDisplayNames.length);
+    for (final name in orderedDynamicNames) {
+      parsed.add(dynamicByName[name]!);
     }
     return List.unmodifiable(parsed);
   }
