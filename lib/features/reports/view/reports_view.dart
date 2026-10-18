@@ -122,7 +122,13 @@ class _ReportsViewState extends State<ReportsView> {
                 const SliverToBoxAdapter(
                   child: Center(child: CircularProgressIndicator()),
                 ),
-              const SliverPadding(padding: EdgeInsets.only(bottom: 12)),
+              SliverPadding(
+                padding: EdgeInsets.only(
+                  bottom: AppDimensions.bottomNavigationScrollClearance(
+                    context,
+                  ),
+                ),
+              ),
             ],
           ),
         );

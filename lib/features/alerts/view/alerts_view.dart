@@ -89,7 +89,13 @@ class AlertsView extends StatelessWidget {
                       );
                     },
                   ),
-                const SliverPadding(padding: EdgeInsets.only(bottom: 12)),
+                SliverPadding(
+                  padding: EdgeInsets.only(
+                    bottom: AppDimensions.bottomNavigationScrollClearance(
+                      context,
+                    ),
+                  ),
+                ),
               ],
             ),
           );

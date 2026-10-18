@@ -24,6 +24,21 @@ abstract final class AppDimensions {
 
   static const double minTouchTarget = 48;
 
+  // Matches the floating navigation bar in [AppBottomNavigation], plus a
+  // little breathing room so the final scrollable item can clear it.
+  static const double bottomNavigationHeight = 68;
+  static const double bottomNavigationInset = 6;
+
+  static double bottomNavigationScrollClearance(BuildContext context) {
+    final safeAreaBottom = MediaQuery.paddingOf(context).bottom;
+    return bottomNavigationHeight +
+        bottomNavigationInset +
+        (safeAreaBottom > bottomNavigationInset
+            ? safeAreaBottom
+            : bottomNavigationInset) +
+        space12;
+  }
+
   static const EdgeInsets pagePadding = EdgeInsets.fromLTRB(20, 12, 20, 24);
   static const EdgeInsets compactPagePadding = EdgeInsets.fromLTRB(
     16,

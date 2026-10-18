@@ -37,7 +37,9 @@ class DashboardView extends StatelessWidget {
     return ResponsivePage(
       child: ListView(
         key: const PageStorageKey('dashboard-list'),
-        padding: const EdgeInsets.only(bottom: 12),
+        padding: EdgeInsets.only(
+          bottom: AppDimensions.bottomNavigationScrollClearance(context),
+        ),
         children: [
           DashboardHeader(onNotificationsTap: onShowAlerts),
           const SizedBox(height: AppDimensions.space16),
