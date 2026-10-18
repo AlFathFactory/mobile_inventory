@@ -20,7 +20,7 @@ import '../../features/inventory/data/repositories/preview_inventory_repository.
 import '../../features/inventory/model/inventory_item.dart';
 import '../../features/inventory/view/inventory_view.dart';
 import '../../features/inventory/view/item_details_route_view.dart';
-import '../../features/reports/controller/reports_controller.dart';
+import '../../features/reports/cubit/reports_cubit.dart';
 import '../../features/reports/data/repositories/preview_reports_repository.dart';
 import '../../features/reports/data/repositories/reports_repository.dart';
 import '../../features/reports/view/reports_view.dart';
@@ -49,7 +49,7 @@ class AppRouter {
          repository: dashboardRepository ?? const PreviewDashboardRepository(),
        ),
        inventoryCubit = _createInventoryCubit(inventoryRepository),
-       reportsController = ReportsController.withRepository(
+       reportsCubit = ReportsCubit.withRepository(
          repository: reportsRepository ?? const PreviewReportsRepository(),
          clock:
              reportsRepository == null ||
@@ -77,7 +77,7 @@ class AppRouter {
       ),
     );
     unawaited(
-      reportsController.load(
+      reportsCubit.load(
         delay:
             reportsRepository == null ||
                 reportsRepository is PreviewReportsRepository
@@ -93,7 +93,7 @@ class AppRouter {
   final AlertsCubit alertsCubit;
   final ItemDetailsRepository itemDetailsRepository;
   final MovementHistoryRepository movementHistoryRepository;
-  final ReportsController reportsController;
+  final ReportsCubit reportsCubit;
   bool _isOpeningItem = false;
 
   late final GoRouter router = GoRouter(
@@ -199,8 +199,10 @@ class AppRouter {
               GoRoute(
                 path: AppRoutePaths.reports,
                 name: AppRouteNames.reports,
-                builder: (context, state) =>
-                    ReportsView(controller: reportsController),
+                builder: (context, state) => BlocProvider.value(
+                  value: reportsCubit,
+                  child: const ReportsView(),
+                ),
               ),
             ],
           ),
@@ -318,6 +320,6 @@ class AppRouter {
     dashboardCubit.close();
     inventoryCubit.close();
     alertsCubit.close();
-    reportsController.dispose();
+    reportsCubit.close();
   }
 }

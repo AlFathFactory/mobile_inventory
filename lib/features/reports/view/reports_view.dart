@@ -1,11 +1,11 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
-
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../core/data/repositories/load_state.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/widgets/responsive_page.dart';
-import '../../../core/data/repositories/load_state.dart';
-import '../controller/reports_controller.dart';
+import '../cubit/reports_cubit.dart';
+import '../cubit/reports_state.dart';
 import '../widgets/report_date_range_picker.dart';
 import '../widgets/report_filters.dart';
 import '../widgets/reports_empty_state.dart';
@@ -16,104 +16,92 @@ import '../widgets/reports_period_selector.dart';
 import '../widgets/reports_results_header.dart';
 
 class ReportsView extends StatelessWidget {
-  const ReportsView({required this.controller, super.key});
-
-  final ReportsController controller;
-
-  Future<void> _pickCustomRange(BuildContext context) async {
-    final selected = await showReportDateRangePicker(
+  const ReportsView({this.controller, super.key});
+  final ReportsCubit? controller;
+  Future<void> _pick(BuildContext context) async {
+    final cubit = context.read<ReportsCubit>();
+    final value = await showReportDateRangePicker(
       context: context,
-      initialRange: controller.dateRange,
+      initialRange: cubit.state.dateRange,
     );
-    if (selected != null) controller.selectDateRange(selected);
+    if (value != null) cubit.selectDateRange(value);
   }
 
   @override
-  Widget build(BuildContext context) {
-    return ResponsivePage(
-      child: ListenableBuilder(
-        listenable: controller,
-        builder: (context, child) {
-          final movements = controller.visibleMovements;
-          final snapshot = controller.snapshot;
-          return NotificationListener<ScrollNotification>(
-            onNotification: (notification) {
-              if (notification.metrics.extentAfter < 320) {
-                unawaited(controller.loadNextPage());
-              }
-              return false;
-            },
-            child: CustomScrollView(
-              key: const PageStorageKey('reports-list'),
-              slivers: [
-                SliverToBoxAdapter(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ReportsHeader(totalCount: snapshot.total),
-                      const SizedBox(height: AppDimensions.space16),
-                      ReportsOverview(snapshot: snapshot),
-                      const SizedBox(height: AppDimensions.space12),
-                      ReportsPeriodSelector(
-                        period: controller.period,
-                        hasCustomRange: controller.dateRange != null,
-                        onSelectPeriod: controller.selectPeriod,
-                        onPickCustom: () => _pickCustomRange(context),
-                      ),
-                      const SizedBox(height: AppDimensions.space12),
-                      ReportFilters(controller: controller),
-                      const SizedBox(height: AppDimensions.space16),
-                      ReportsResultsHeader(
-                        count: movements.length,
-                        hasActiveFilters: controller.hasActiveFilters,
-                        onClear: controller.clearFilters,
-                      ),
-                      const SizedBox(height: AppDimensions.space8),
-                    ],
-                  ),
+  Widget build(BuildContext context) => controller == null
+      ? _content(context)
+      : BlocProvider.value(
+          value: controller!,
+          child: Builder(builder: _content),
+        );
+
+  Widget _content(BuildContext context) => ResponsivePage(
+    child: BlocBuilder<ReportsCubit, ReportsState>(
+      builder: (context, state) {
+        final cubit = context.read<ReportsCubit>();
+        final movements = state.movements;
+        return NotificationListener<ScrollNotification>(
+          onNotification: (n) {
+            if (n.metrics.extentAfter < 320) unawaited(cubit.loadNextPage());
+            return false;
+          },
+          child: CustomScrollView(
+            key: const PageStorageKey('reports-list'),
+            slivers: [
+              SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ReportsHeader(totalCount: state.snapshot.total),
+                    const SizedBox(height: AppDimensions.space16),
+                    ReportsOverview(snapshot: state.snapshot),
+                    const SizedBox(height: AppDimensions.space12),
+                    ReportsPeriodSelector(
+                      period: state.period,
+                      hasCustomRange: state.dateRange != null,
+                      onSelectPeriod: cubit.selectPeriod,
+                      onPickCustom: () => _pick(context),
+                    ),
+                    const SizedBox(height: AppDimensions.space12),
+                    ReportFilters(controller: cubit),
+                    const SizedBox(height: AppDimensions.space16),
+                    ReportsResultsHeader(
+                      count: movements.length,
+                      hasActiveFilters: state.hasActiveFilters,
+                      onClear: cubit.clearFilters,
+                    ),
+                    const SizedBox(height: AppDimensions.space8),
+                  ],
                 ),
-                if (controller.state.isLoading && movements.isEmpty)
-                  const SliverToBoxAdapter(
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                else if (controller.state.status == DataLoadStatus.failure &&
-                    movements.isEmpty)
-                  SliverToBoxAdapter(
-                    child: Center(
-                      child: Text(
-                        controller.failure?.message ?? 'تعذر تحميل التقارير.',
-                      ),
-                    ),
-                  )
-                else if (movements.isEmpty)
-                  SliverToBoxAdapter(
-                    child: ReportsEmptyState(
-                      hasActiveFilters: controller.hasActiveFilters,
-                    ),
-                  )
-                else
-                  SliverToBoxAdapter(
-                    child: ReportsMovementList(movements: movements),
+              ),
+              if (state.isLoading && movements.isEmpty)
+                const SliverToBoxAdapter(
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (state.status == DataLoadStatus.failure &&
+                  movements.isEmpty)
+                SliverToBoxAdapter(
+                  child: Center(child: Text('تعذر تحميل التقارير.')),
+                )
+              else if (movements.isEmpty)
+                SliverToBoxAdapter(
+                  child: ReportsEmptyState(
+                    hasActiveFilters: state.hasActiveFilters,
                   ),
-                if (controller.isLoadingMore)
-                  const SliverToBoxAdapter(
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                if (controller.state.status == DataLoadStatus.failure &&
-                    movements.isNotEmpty)
-                  SliverToBoxAdapter(
-                    child: Center(
-                      child: Text(
-                        controller.failure?.message ?? 'تعذر تحميل التقارير.',
-                      ),
-                    ),
-                  ),
-                const SliverPadding(padding: EdgeInsets.only(bottom: 12)),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
+                )
+              else
+                SliverToBoxAdapter(
+                  child: ReportsMovementList(movements: movements),
+                ),
+              if (state.isLoadingMore)
+                const SliverToBoxAdapter(
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+              const SliverPadding(padding: EdgeInsets.only(bottom: 12)),
+            ],
+          ),
+        );
+      },
+    ),
+  );
 }

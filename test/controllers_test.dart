@@ -5,7 +5,7 @@ import 'package:el_fateh/features/inventory/cubit/inventory_cubit.dart';
 import 'package:el_fateh/features/inventory/model/inventory_filter.dart';
 import 'package:el_fateh/features/inventory/model/inventory_item.dart';
 import 'package:el_fateh/features/inventory/model/inventory_movement.dart';
-import 'package:el_fateh/features/reports/controller/reports_controller.dart';
+import 'package:el_fateh/features/reports/cubit/reports_cubit.dart';
 import 'package:el_fateh/features/reports/model/report_filter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -93,9 +93,9 @@ void main() {
     expect(cubit.state.items, hasLength(3));
   });
 
-  test('ReportsController combines movement type and project filters', () {
-    final controller = ReportsController(PreviewData.reportMovements);
-    addTearDown(controller.dispose);
+  test('ReportsCubit combines movement type and project filters', () {
+    final controller = ReportsCubit(PreviewData.reportMovements);
+    addTearDown(controller.close);
 
     controller.selectType(MovementType.returned);
     expect(controller.visibleMovements.single.itemCode, 'EL-CB-025');
@@ -105,9 +105,9 @@ void main() {
     expect(controller.visibleMovements.single.itemCode, 'WD-WR-030');
   });
 
-  test('ReportsController applies an inclusive custom date range', () {
-    final controller = ReportsController(PreviewData.reportMovements);
-    addTearDown(controller.dispose);
+  test('ReportsCubit applies an inclusive custom date range', () {
+    final controller = ReportsCubit(PreviewData.reportMovements);
+    addTearDown(controller.close);
 
     controller.selectDateRange(
       DateTimeRange(

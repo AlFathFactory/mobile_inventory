@@ -6,7 +6,7 @@ import 'package:el_fateh/core/data/repositories/page.dart';
 import 'package:el_fateh/features/inventory/model/inventory_movement.dart';
 import 'package:el_fateh/features/reports/data/models/reports_query.dart';
 import 'package:el_fateh/features/reports/data/models/reports_data.dart';
-import 'package:el_fateh/features/reports/controller/reports_controller.dart';
+import 'package:el_fateh/features/reports/cubit/reports_cubit.dart';
 import 'package:el_fateh/features/reports/data/repositories/preview_reports_repository.dart';
 import 'package:el_fateh/features/reports/data/repositories/reports_repository_factory.dart';
 import 'package:el_fateh/features/reports/data/repositories/reports_repository.dart';

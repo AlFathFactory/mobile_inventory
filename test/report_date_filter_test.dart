@@ -1,9 +1,10 @@
 import 'package:el_fateh/core/data/preview_data.dart';
-import 'package:el_fateh/features/reports/controller/reports_controller.dart';
+import 'package:el_fateh/features/reports/cubit/reports_cubit.dart';
 import 'package:el_fateh/features/reports/model/report_filter.dart';
 import 'package:el_fateh/features/reports/widgets/report_date_range_picker.dart';
 import 'package:el_fateh/features/reports/widgets/report_filters.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -30,10 +31,12 @@ void main() {
         home: Scaffold(
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
-            child: ListenableBuilder(
-              listenable: controller,
-              builder: (context, child) =>
-                  ReportFilters(controller: controller),
+            child: BlocProvider.value(
+              value: controller,
+              child: BlocBuilder<ReportsCubit, dynamic>(
+                builder: (context, state) =>
+                    ReportFilters(controller: controller),
+              ),
             ),
           ),
         ),

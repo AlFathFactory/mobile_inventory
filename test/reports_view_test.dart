@@ -1,7 +1,7 @@
 import 'package:el_fateh/core/data/preview_data.dart';
 import 'package:el_fateh/core/theme/app_theme.dart';
 import 'package:el_fateh/features/inventory/model/inventory_movement.dart';
-import 'package:el_fateh/features/reports/controller/reports_controller.dart';
+import 'package:el_fateh/features/reports/cubit/reports_cubit.dart';
 import 'package:el_fateh/features/reports/model/report_filter.dart';
 import 'package:el_fateh/features/reports/view/reports_view.dart';
 import 'package:el_fateh/features/reports/widgets/report_date_range_picker.dart';

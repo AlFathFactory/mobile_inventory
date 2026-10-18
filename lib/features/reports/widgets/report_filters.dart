@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../inventory/model/inventory_movement.dart';
-import '../controller/reports_controller.dart';
+import '../cubit/reports_cubit.dart';
+import '../cubit/reports_state.dart';
 import '../model/report_filter.dart';
 import 'report_date_range_picker.dart';
 
 class ReportFilters extends StatelessWidget {
   const ReportFilters({required this.controller, super.key});
 
-  final ReportsController controller;
+  final ReportsCubit controller;
 
   int get _secondaryFilterCount =>
       (controller.selectedType != null ? 1 : 0) +
@@ -72,9 +74,9 @@ class ReportFilters extends StatelessWidget {
       showDragHandle: true,
       backgroundColor: AppColors.surface,
       constraints: const BoxConstraints(maxWidth: 600),
-      builder: (sheetContext) => ListenableBuilder(
-        listenable: controller,
-        builder: (context, child) {
+      builder: (sheetContext) => BlocBuilder<ReportsCubit, ReportsState>(
+        bloc: controller,
+        builder: (context, state) {
           return SingleChildScrollView(
             padding: EdgeInsets.fromLTRB(
               20,
