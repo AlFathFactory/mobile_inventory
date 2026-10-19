@@ -33,6 +33,22 @@ void main() {
         ItemDetailsRemoteQuery.viewName,
         'inventory_category_items_summary_view',
       );
+      expect(
+        ItemDetailsRemoteQuery.selectedColumns,
+        isNot(contains('dimension_text')),
+      );
+      expect(
+        ItemDetailsRemoteQuery.selectedColumns,
+        containsAll([
+          'weight',
+          'length',
+          'width',
+          'th',
+          'material_source',
+          'code_number',
+          'din',
+        ]),
+      );
       expect(item.tableName, 'paints');
       expect(item.itemId, firstId);
       expect(item.code, 'DUPLICATE-CODE');
@@ -42,9 +58,45 @@ void main() {
       expect(item.supplier, 'Supplier');
       expect(item.expiry, '2027-03-01');
       expect(item.productionDate, '2026-10-05');
+      expect(item.dimensionText, isNull);
       expect(item.notes, 'Read only');
       expect(item.updatedAt, DateTime.parse('2026-10-13T10:00:00Z'));
     });
+
+    test(
+      'maps a raw-material row without dimension_text and retains its physical fields',
+      () async {
+        final source = _FakeItemDetailsSource(
+          rows: {
+            ('raw_materials', firstId): {
+              ..._row(tableName: 'raw_materials', itemId: firstId),
+              'weight': '0',
+              'length': '2470',
+              'width': '380',
+              'th': '5',
+              'material_source': 'Mill',
+              'code_number': 'D147',
+              'din': 'DIN 100',
+            },
+          },
+        );
+
+        final result = await SupabaseItemDetailsRepository(
+          source,
+        ).fetchItemByRouteId('raw_materials::$firstId');
+
+        final item = (result as DataSuccess<InventoryItem?>).value!;
+        expect(item.dimensionText, isNull);
+        expect(
+          item.categorySpecificAttributes.map((attribute) => attribute.value),
+          ['0', '2470', '380', '5', 'Mill', 'D147', 'DIN 100'],
+        );
+        expect(
+          item.categorySpecificAttributes.map((attribute) => attribute.label),
+          isNot(contains('الأبعاد')),
+        );
+      },
+    );
 
     test(
       'uses production_date rather than transaction_date for paints',
@@ -245,7 +297,6 @@ Map<String, dynamic> _row({
     'width': null,
     'th': null,
     'material_source': null,
-    'dimension_text': null,
     'din': null,
     'notes': 'Read only',
     'updated_at': '2026-10-13T10:00:00Z',

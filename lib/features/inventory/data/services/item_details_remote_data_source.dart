@@ -25,7 +25,6 @@ class ItemDetailsRemoteQuery {
     'width',
     'th',
     'material_source',
-    'dimension_text',
     'din',
     'notes',
     'updated_at',

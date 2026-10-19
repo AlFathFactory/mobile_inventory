@@ -81,61 +81,82 @@ void main() {
     expect(find.text('لا توجد حركات مسجلة لهذا الصنف.'), findsOneWidget);
   });
 
-  testWidgets('shows only populated category-specific attributes', (
-    tester,
-  ) async {
-    const item = InventoryItem(
-      code: 'RAW-1',
-      name: 'Raw material',
-      category: 'خامات',
-      project: 'Project',
-      quantity: 1,
-      minimum: 0,
-      tableName: 'raw_materials',
-      weight: '0',
-      length: '2470',
-      width: '380',
-      thickness: '5',
-      materialSource: 'Mill',
-      codeNumber: 'D147',
-      dimensionText: '2470 × 380 × 5',
-    );
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: Directionality(
-          textDirection: TextDirection.rtl,
-          child: ItemDetailsView(item: item, movements: []),
+  testWidgets(
+    'omits an absent dimensions row while rendering raw-material fields',
+    (tester) async {
+      const item = InventoryItem(
+        code: 'RAW-1',
+        name: 'Raw material',
+        category: 'خامات',
+        project: 'Project',
+        quantity: 1,
+        minimum: 0,
+        tableName: 'raw_materials',
+        weight: '0',
+        length: '2470',
+        width: '380',
+        thickness: '5',
+        materialSource: 'Mill',
+        codeNumber: 'D147',
+      );
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Directionality(
+            textDirection: TextDirection.rtl,
+            child: ItemDetailsView(item: item, movements: []),
+          ),
         ),
-      ),
-    );
+      );
 
-    final attributes = find.byKey(
-      const Key('item-category-attributes'),
-      skipOffstage: false,
-    );
-    expect(attributes, findsOneWidget);
-    expect(
-      find.descendant(
-        of: attributes,
-        matching: find.text('0', skipOffstage: false),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: attributes,
-        matching: find.text('D147', skipOffstage: false),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: attributes,
-        matching: find.text('DIN', skipOffstage: false),
-      ),
-      findsNothing,
-    );
-  });
+      final attributes = find.byKey(
+        const Key('item-category-attributes'),
+        skipOffstage: false,
+      );
+      expect(attributes, findsOneWidget);
+      expect(
+        find.descendant(
+          of: attributes,
+          matching: find.text('0', skipOffstage: false),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: attributes,
+          matching: find.text('2470', skipOffstage: false),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: attributes,
+          matching: find.text('Mill', skipOffstage: false),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: attributes,
+          matching: find.text('الأبعاد', skipOffstage: false),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: attributes,
+          matching: find.text('D147', skipOffstage: false),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: attributes,
+          matching: find.text('DIN', skipOffstage: false),
+        ),
+        findsNothing,
+      );
+    },
+  );
 
   testWidgets('does not show legacy attributes for dynamic items', (
     tester,
