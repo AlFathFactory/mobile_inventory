@@ -186,18 +186,22 @@ class ReportsCubit extends Cubit<ReportsState> {
     if (preview == null) return;
     final query = _query();
     final search = state.query.trim().toLowerCase();
-    final rows = preview.where((row) {
-      final date = DateUtils.dateOnly(row.date);
-      return (search.isEmpty ||
-              row.itemName.toLowerCase().contains(search) ||
-              row.itemCode.toLowerCase().contains(search) ||
-              row.project.toLowerCase().contains(search)) &&
-          (query.types.isEmpty || query.types.contains(row.type)) &&
-          (query.categories.isEmpty || query.categories.contains(row.category)) &&
-          (query.projects.isEmpty || query.projects.contains(row.project)) &&
-          (query.startDate == null || !date.isBefore(query.startDate!)) &&
-          (query.endDate == null || !date.isAfter(query.endDate!));
-    }).toList(growable: false);
+    final rows = preview
+        .where((row) {
+          final date = DateUtils.dateOnly(row.date);
+          return (search.isEmpty ||
+                  row.itemName.toLowerCase().contains(search) ||
+                  row.itemCode.toLowerCase().contains(search) ||
+                  row.project.toLowerCase().contains(search)) &&
+              (query.types.isEmpty || query.types.contains(row.type)) &&
+              (query.categories.isEmpty ||
+                  query.categories.contains(row.category)) &&
+              (query.projects.isEmpty ||
+                  query.projects.contains(row.project)) &&
+              (query.startDate == null || !date.isBefore(query.startDate!)) &&
+              (query.endDate == null || !date.isAfter(query.endDate!));
+        })
+        .toList(growable: false);
     emit(
       state.copyWith(
         movements: rows,

@@ -20,4 +20,21 @@ class SupabaseItemDetailsService implements ItemDetailsRemoteDataSource {
     if (rows.isEmpty) return null;
     return Map<String, dynamic>.from(rows.single as Map);
   }
+
+  @override
+  Future<String?> fetchPaintProductionDate(String itemId) async {
+    final response = await _client
+        .from('paints')
+        .select('id,production_date')
+        .eq('id', itemId)
+        .limit(1);
+
+    final rows = response as List<dynamic>;
+    if (rows.isEmpty) return null;
+    final row = Map<String, dynamic>.from(rows.single as Map);
+    final value = row['production_date'];
+    if (value is String && value.trim().isNotEmpty) return value;
+    if (value is num) return value.toString();
+    return null;
+  }
 }

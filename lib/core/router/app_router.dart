@@ -202,9 +202,11 @@ class AppRouter {
                 name: AppRouteNames.reports,
                 builder: (context, state) => BlocProvider.value(
                   value: reportsCubit,
-                  child: ReportsView(onOpenMovement: (movement) {
-                    _openMovement(context, movement);
-                  }),
+                  child: ReportsView(
+                    onOpenMovement: (movement) {
+                      _openMovement(context, movement);
+                    },
+                  ),
                 ),
               ),
             ],

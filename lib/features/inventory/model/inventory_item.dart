@@ -28,6 +28,15 @@ class InventoryItem {
     this.categoryId,
     this.supplier,
     this.expiry,
+    this.productionDate,
+    this.din,
+    this.codeNumber,
+    this.weight,
+    this.length,
+    this.width,
+    this.thickness,
+    this.materialSource,
+    this.dimensionText,
     this.notes,
     this.updatedAt,
   });
@@ -43,6 +52,15 @@ class InventoryItem {
       minimum: JsonMapReader.integer(json, 'minimum'),
       supplier: JsonMapReader.nullableString(json, 'supplier'),
       expiry: JsonMapReader.nullableString(json, 'expiry'),
+      productionDate: JsonMapReader.nullableString(json, 'production_date'),
+      din: JsonMapReader.nullableString(json, 'din'),
+      codeNumber: JsonMapReader.nullableString(json, 'code_number'),
+      weight: JsonMapReader.nullableString(json, 'weight'),
+      length: JsonMapReader.nullableString(json, 'length'),
+      width: JsonMapReader.nullableString(json, 'width'),
+      thickness: JsonMapReader.nullableString(json, 'th'),
+      materialSource: JsonMapReader.nullableString(json, 'material_source'),
+      dimensionText: JsonMapReader.nullableString(json, 'dimension_text'),
       notes: JsonMapReader.nullableString(json, 'notes'),
     );
   }
@@ -72,6 +90,14 @@ class InventoryItem {
       itemKey: itemKey,
       supplier: JsonMapReader.nullableString(json, 'supplier_name'),
       expiry: JsonMapReader.nullableString(json, 'expire_date'),
+      din: JsonMapReader.nullableString(json, 'din'),
+      codeNumber: codeNumber,
+      weight: JsonMapReader.nullableString(json, 'weight'),
+      length: JsonMapReader.nullableString(json, 'length'),
+      width: JsonMapReader.nullableString(json, 'width'),
+      thickness: JsonMapReader.nullableString(json, 'th'),
+      materialSource: JsonMapReader.nullableString(json, 'material_source'),
+      dimensionText: JsonMapReader.nullableString(json, 'dimension_text'),
       notes: JsonMapReader.nullableString(json, 'notes'),
       updatedAt: JsonMapReader.nullableDateTime(json, 'updated_at'),
     );
@@ -89,6 +115,15 @@ class InventoryItem {
   final num minimum;
   final String? supplier;
   final String? expiry;
+  final String? productionDate;
+  final String? din;
+  final String? codeNumber;
+  final String? weight;
+  final String? length;
+  final String? width;
+  final String? thickness;
+  final String? materialSource;
+  final String? dimensionText;
   final String? notes;
   final DateTime? updatedAt;
 
@@ -98,9 +133,74 @@ class InventoryItem {
   /// plus UUID so duplicate display codes cannot open the wrong item.
   String get routeId => hasBackendIdentity ? '$tableName::$itemId' : code;
 
+  InventoryItem withProductionDate(String? value) => InventoryItem(
+    code: code,
+    name: name,
+    category: category,
+    project: project,
+    quantity: quantity,
+    minimum: minimum,
+    tableName: tableName,
+    itemId: itemId,
+    itemKey: itemKey,
+    categoryId: categoryId,
+    supplier: supplier,
+    expiry: expiry,
+    productionDate: value,
+    din: din,
+    codeNumber: codeNumber,
+    weight: weight,
+    length: length,
+    width: width,
+    thickness: thickness,
+    materialSource: materialSource,
+    dimensionText: dimensionText,
+    notes: notes,
+    updatedAt: updatedAt,
+  );
+
+  List<InventoryItemAttribute> get categorySpecificAttributes =>
+      switch (tableName) {
+        'paints' => _attributes([
+          ('تاريخ الإنتاج', productionDate),
+          ('تاريخ الصلاحية', expiry),
+        ]),
+        'screws' || 'stock_screws' => _attributes([
+          ('DIN', din),
+          ('رقم الكود', codeNumber),
+        ]),
+        'raw_materials' => _attributes([
+          ('الوزن', weight),
+          ('الطول', length),
+          ('العرض', width),
+          ('السمك', thickness),
+          ('مصدر الخامة', materialSource),
+          ('رقم الكود', codeNumber),
+          ('الأبعاد', dimensionText),
+          ('DIN', din),
+        ]),
+        _ => const [],
+      };
+
+  static List<InventoryItemAttribute> _attributes(
+    List<(String, String?)> values,
+  ) => [
+    for (final (label, value) in values)
+      if (value?.trim().isNotEmpty ?? false)
+        InventoryItemAttribute(label, value!),
+  ];
+
   StockStatus get status {
     if (quantity <= 0) return StockStatus.outOfStock;
     if (quantity <= minimum) return StockStatus.low;
     return StockStatus.safe;
   }
+}
+
+@immutable
+class InventoryItemAttribute {
+  const InventoryItemAttribute(this.label, this.value);
+
+  final String label;
+  final String value;
 }

@@ -24,7 +24,7 @@ class ItemInformationSection extends StatelessWidget {
           label: 'المورد',
           value: supplier,
         ),
-      if (item.expiry case final expiry?)
+      if (item.expiry case final expiry? when item.tableName != 'paints')
         _InformationEntry(
           icon: Icons.event_outlined,
           label: 'تاريخ الانتهاء',
@@ -55,6 +55,50 @@ class ItemInformationSection extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class ItemCategoryAttributesSection extends StatelessWidget {
+  const ItemCategoryAttributesSection({required this.item, super.key});
+
+  final InventoryItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final attributes = item.categorySpecificAttributes;
+    if (attributes.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      key: const Key('item-category-attributes'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('تفاصيل الصنف', style: AppTextStyles.sectionTitle),
+        const SizedBox(height: 10),
+        AppCard(
+          padding: const EdgeInsets.all(15),
+          child: Column(
+            children: [
+              for (var index = 0; index < attributes.length; index++) ...[
+                _InformationRow(
+                  entry: _InformationEntry(
+                    icon: Icons.tune_outlined,
+                    label: attributes[index].label,
+                    value: _formatDate(attributes[index].value),
+                  ),
+                ),
+                if (index != attributes.length - 1) const SizedBox(height: 14),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatDate(String value) {
+    final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})').firstMatch(value);
+    if (match == null) return value;
+    return '${match.group(3)}/${match.group(2)}/${match.group(1)}';
   }
 }
 

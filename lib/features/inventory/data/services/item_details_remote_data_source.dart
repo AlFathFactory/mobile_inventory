@@ -20,6 +20,13 @@ class ItemDetailsRemoteQuery {
     'min_quantity',
     'supplier_name',
     'expire_date',
+    'weight',
+    'length',
+    'width',
+    'th',
+    'material_source',
+    'dimension_text',
+    'din',
     'notes',
     'updated_at',
     'code_number',
@@ -32,4 +39,8 @@ class ItemDetailsRemoteQuery {
 
 abstract interface class ItemDetailsRemoteDataSource {
   Future<Map<String, dynamic>?> fetchItem(ItemDetailsRemoteQuery query);
+
+  /// The unified view intentionally does not expose this paint-only field.
+  /// Keeping it here confines the supplemental bounded read to the data layer.
+  Future<String?> fetchPaintProductionDate(String itemId);
 }

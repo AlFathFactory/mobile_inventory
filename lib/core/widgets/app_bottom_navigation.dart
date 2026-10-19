@@ -17,7 +17,7 @@ class AppBottomNavigation extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       top: false,
-      minimum: const EdgeInsets.fromLTRB(16, 6, 16, 6),
+      minimum: const EdgeInsets.fromLTRB(16, 6, 16, 16),
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: AppColors.surface,

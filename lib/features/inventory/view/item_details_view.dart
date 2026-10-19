@@ -71,6 +71,10 @@ class _ItemDetailsViewState extends State<ItemDetailsView> {
               ItemStockOverview(item: widget.item),
               const SizedBox(height: AppDimensions.space24),
               ItemInformationSection(item: widget.item),
+              if (widget.item.categorySpecificAttributes.isNotEmpty) ...[
+                const SizedBox(height: AppDimensions.space20),
+                ItemCategoryAttributesSection(item: widget.item),
+              ],
               if (widget.item.notes case final notes?) ...[
                 const SizedBox(height: AppDimensions.space20),
                 ItemNotesSection(notes: notes),

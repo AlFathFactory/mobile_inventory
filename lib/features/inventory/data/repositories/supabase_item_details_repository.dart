@@ -31,10 +31,16 @@ class SupabaseItemDetailsRepository implements ItemDetailsRepository {
       );
       if (row == null) return const DataSuccess(null);
 
-      final item = InventoryItem.fromInventorySummaryRow(row);
+      var item = InventoryItem.fromInventorySummaryRow(row);
       if (item.tableName != identity.tableName ||
           item.itemId != identity.itemId) {
         throw const FormatException('Item identity does not match its row.');
+      }
+
+      if (identity.tableName == 'paints') {
+        item = item.withProductionDate(
+          await _dataSource.fetchPaintProductionDate(identity.itemId),
+        );
       }
       return DataSuccess(item);
     } on Object catch (error) {

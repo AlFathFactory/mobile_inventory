@@ -19,6 +19,7 @@ void main() {
     test('looks up and maps one item by table name plus item id', () async {
       final source = _FakeItemDetailsSource(
         rows: {('paints', firstId): _row(tableName: 'paints', itemId: firstId)},
+        paintProductionDates: {firstId: '2026-10-05'},
       );
       final repository = SupabaseItemDetailsRepository(source);
 
@@ -40,9 +41,53 @@ void main() {
       expect(item.minimum, 2);
       expect(item.supplier, 'Supplier');
       expect(item.expiry, '2027-03-01');
+      expect(item.productionDate, '2026-10-05');
       expect(item.notes, 'Read only');
       expect(item.updatedAt, DateTime.parse('2026-10-13T10:00:00Z'));
     });
+
+    test(
+      'uses production_date rather than transaction_date for paints',
+      () async {
+        final source = _FakeItemDetailsSource(
+          rows: {
+            ('paints', firstId): {
+              ..._row(tableName: 'paints', itemId: firstId),
+              'transaction_date': '1999-01-01',
+            },
+          },
+          paintProductionDates: {firstId: '2026-10-05'},
+        );
+
+        final item =
+            ((await SupabaseItemDetailsRepository(
+                      source,
+                    ).fetchItemByRouteId('paints::$firstId'))
+                    as DataSuccess<InventoryItem?>)
+                .value!;
+
+        expect(item.productionDate, '2026-10-05');
+        expect(item.productionDate, isNot('1999-01-01'));
+        expect(source.paintProductionDateRequests, [firstId]);
+      },
+    );
+
+    test(
+      'does not make a paint supplemental read for other categories',
+      () async {
+        final source = _FakeItemDetailsSource(
+          rows: {
+            ('screws', firstId): _row(tableName: 'screws', itemId: firstId),
+          },
+        );
+
+        await SupabaseItemDetailsRepository(
+          source,
+        ).fetchItemByRouteId('screws::$firstId');
+
+        expect(source.paintProductionDateRequests, isEmpty);
+      },
+    );
 
     test(
       'returns empty when the active unified view has no matching row',
@@ -195,6 +240,13 @@ Map<String, dynamic> _row({
     'min_quantity': 2,
     'supplier_name': 'Supplier',
     'expire_date': '2027-03-01',
+    'weight': null,
+    'length': null,
+    'width': null,
+    'th': null,
+    'material_source': null,
+    'dimension_text': null,
+    'din': null,
     'notes': 'Read only',
     'updated_at': '2026-10-13T10:00:00Z',
     'code_number': null,
@@ -203,17 +255,30 @@ Map<String, dynamic> _row({
 }
 
 class _FakeItemDetailsSource implements ItemDetailsRemoteDataSource {
-  _FakeItemDetailsSource({this.rows = const {}, this.error});
+  _FakeItemDetailsSource({
+    this.rows = const {},
+    this.paintProductionDates = const {},
+    this.error,
+  });
 
   final Map<(String, String), Map<String, dynamic>> rows;
+  final Map<String, String?> paintProductionDates;
   final Object? error;
   final List<ItemDetailsRemoteQuery> requests = [];
+  final List<String> paintProductionDateRequests = [];
 
   @override
   Future<Map<String, dynamic>?> fetchItem(ItemDetailsRemoteQuery query) async {
     requests.add(query);
     if (error case final error?) throw error;
     return rows[(query.tableName, query.itemId)];
+  }
+
+  @override
+  Future<String?> fetchPaintProductionDate(String itemId) async {
+    paintProductionDateRequests.add(itemId);
+    if (error case final error?) throw error;
+    return paintProductionDates[itemId];
   }
 }
 

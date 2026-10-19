@@ -9,7 +9,7 @@ abstract final class JsonMapReader {
   static String? nullableString(Map<String, dynamic> json, String key) {
     final value = json[key];
     if (value == null) return null;
-    if (value is String) return value.isEmpty ? null : value;
+    if (value is String) return value.trim().isEmpty ? null : value;
     if (value is num) return value.toString();
     throw FormatException('Expected a string or null for "$key".');
   }

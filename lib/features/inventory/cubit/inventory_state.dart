@@ -37,6 +37,7 @@ class InventoryState {
     return items.map((item) => item.category).toSet().toList(growable: false)
       ..sort();
   }
+
   List<String> get projects =>
       items
           .map((item) => item.project)
