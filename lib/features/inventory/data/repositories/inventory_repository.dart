@@ -10,8 +10,9 @@ abstract interface class InventoryRepository {
 
   Future<DataResult<List<String>>> fetchCategories() async =>
       const DataSuccess([]);
+}
 
-  /// Refreshes the complete local snapshot when this repository has one.
-  /// Preview and direct remote implementations remain no-ops.
-  Future<void> refreshCache() async {}
+/// Optional capability implemented only by repositories with a local cache.
+abstract interface class InventoryCacheRefreshable {
+  Future<void> refreshCache();
 }

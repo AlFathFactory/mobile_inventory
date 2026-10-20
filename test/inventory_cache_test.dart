@@ -237,10 +237,7 @@ class _PagedRemoteSource implements InventoryRemoteDataSource {
   }
 
   @override
-  Future<List<String>> fetchCategories() {
-    // TODO: implement fetchCategories
-    throw UnimplementedError();
-  }
+  Future<List<String>> fetchCategories() async => const [];
 }
 
 InventoryItem _item(

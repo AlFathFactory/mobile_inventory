@@ -194,7 +194,10 @@ class InventoryCubit extends Cubit<InventoryState> {
   Future<void> retry() => reload();
 
   Future<void> refresh() async {
-    await _repository?.refreshCache();
+    final repository = _repository;
+    if (repository case final InventoryCacheRefreshable cacheRepository) {
+      await cacheRepository.refreshCache();
+    }
     await reload();
   }
 

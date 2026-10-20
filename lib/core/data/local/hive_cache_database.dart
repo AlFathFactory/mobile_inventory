@@ -1,4 +1,3 @@
-import 'package:hive_ce/hive.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 
 import '../../../features/inventory/data/local/inventory_cache_record.dart';

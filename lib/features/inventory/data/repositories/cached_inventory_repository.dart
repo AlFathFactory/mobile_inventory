@@ -11,7 +11,8 @@ import '../services/inventory_sync_coordinator.dart';
 import 'inventory_repository.dart';
 
 /// Read-through inventory repository for the production Supabase mode.
-class CachedInventoryRepository implements InventoryRepository {
+class CachedInventoryRepository
+    implements InventoryRepository, InventoryCacheRefreshable {
   CachedInventoryRepository({
     required InventoryLocalDataSource local,
     required InventorySyncCoordinator syncCoordinator,
@@ -29,8 +30,9 @@ class CachedInventoryRepository implements InventoryRepository {
       return DataSuccess(_categories(snapshot.items));
     }
     final result = await _syncCoordinator.syncIfStale();
-    if (!result.isSuccess)
+    if (!result.isSuccess) {
       return DataError(SupabaseFailureMapper.from(result.error!));
+    }
     final refreshed = await _local.readSnapshot();
     return DataSuccess(_categories(refreshed?.items ?? const []));
   }

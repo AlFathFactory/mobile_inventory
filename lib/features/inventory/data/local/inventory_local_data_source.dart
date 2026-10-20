@@ -33,9 +33,9 @@ class InventoryCacheSnapshot {
     for (final item in items) {
       (result[item.category] ??= []).add(item);
     }
-    return Map.unmodifiable({
+    return Map<String, List<InventoryItem>>.unmodifiable({
       for (final entry in result.entries)
-        entry.key: List.unmodifiable(entry.value),
+        entry.key: List<InventoryItem>.unmodifiable(entry.value),
     });
   }
 }
