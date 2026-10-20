@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/data/repositories/data_result.dart';
 import '../../../core/data/repositories/page.dart';
+import '../../../core/data/services/supabase_failure_mapper.dart';
 import '../../../core/utils/search_normalizer.dart';
 import '../data/models/inventory_query.dart';
 import '../data/repositories/inventory_repository.dart';
@@ -28,11 +29,24 @@ class InventoryCubit extends Cubit<InventoryState> {
            isServerBacked: serverBacked,
            isLoading: initiallyLoading,
          ),
-       );
+       ) {
+    if (repository case final InventoryCacheReadable cache) {
+      _cacheSubscription = cache.cacheEvents.listen((event) {
+        if (isClosed) return;
+        if (event.failure case final failure?) {
+          emit(state.copyWith(refreshFailure: failure));
+        } else {
+          emit(state.copyWith(clearRefreshFailure: true));
+          if (!state.isRefreshing) unawaited(reload());
+        }
+      });
+    }
+  }
 
   final InventoryRepository? _repository;
   final Duration _searchDebounce;
   Timer? _searchTimer;
+  StreamSubscription<InventoryCacheEvent>? _cacheSubscription;
   int _requestRevision = 0;
 
   List<InventoryItem> get allItems => state.items;
@@ -87,6 +101,8 @@ class InventoryCubit extends Cubit<InventoryState> {
     _invalidateRequests();
     emit(
       state.copyWith(
+        items: state.isServerBacked ? const [] : null,
+        isLoading: state.isServerBacked ? true : null,
         query: value,
         clearFailure: true,
         clearNextCursor: true,
@@ -165,13 +181,32 @@ class InventoryCubit extends Cubit<InventoryState> {
       );
       return;
     }
-    final result = await _repository!.fetchItems(query);
+    late final DataResult<PageResult<InventoryItem>> result;
+    try {
+      result = await _repository!.fetchItems(query);
+    } on Object catch (error) {
+      if (isClosed || revision != _requestRevision) return;
+      emit(
+        state.copyWith(
+          failure: SupabaseFailureMapper.from(error),
+          isLoading: false,
+        ),
+      );
+      return;
+    }
     if (isClosed || revision != _requestRevision) return;
     switch (result) {
       case DataSuccess(:final value):
+        DateTime? lastSync;
+        if (_repository case final InventoryCacheReadable cache) {
+          lastSync = await cache.lastSuccessfulSync();
+          if (isClosed || revision != _requestRevision) return;
+        }
         emit(
           state.copyWith(
             items: value.items,
+            isCached: lastSync != null,
+            lastSuccessfulSync: lastSync,
             nextCursor: value.nextCursor,
             clearNextCursor: value.nextCursor == null,
             clearFailure: true,
@@ -179,37 +214,92 @@ class InventoryCubit extends Cubit<InventoryState> {
           ),
         );
       case DataError(:final failure):
-        final items = state.items.every((item) => !item.hasBackendIdentity)
-            ? const <InventoryItem>[]
-            : state.items;
-        emit(state.copyWith(items: items, failure: failure, isLoading: false));
+        emit(state.copyWith(failure: failure, isLoading: false));
     }
-    final categories = await _repository.fetchCategories();
+    DataResult<List<String>> categories;
+    try {
+      categories = await _repository.fetchCategories();
+    } on Object {
+      return;
+    }
     if (isClosed || revision != _requestRevision) return;
     if (categories case DataSuccess(:final value)) {
       emit(state.copyWith(categories: value));
     }
   }
 
-  Future<void> retry() => reload();
+  Future<void> retry() {
+    if (state.isLoading || state.isRefreshing) return Future.value();
+    return reload();
+  }
 
   Future<void> refresh() async {
+    if (state.isRefreshing || state.isLoading) return;
+    emit(
+      state.copyWith(
+        isRefreshing: true,
+        clearRefreshFailure: true,
+        clearRefreshResult: true,
+      ),
+    );
     final repository = _repository;
-    if (repository case final InventoryCacheRefreshable cacheRepository) {
-      await cacheRepository.refreshCache();
+    try {
+      if (repository case final InventoryCacheRefreshable cacheRepository) {
+        await cacheRepository.refreshCache();
+      }
+      if (!isClosed) {
+        await reload();
+        if (!isClosed) {
+          emit(
+            state.copyWith(
+              isRefreshing: false,
+              refreshSucceeded: state.failure == null,
+              refreshFailure: state.failure,
+              clearRefreshFailure: state.failure == null,
+            ),
+          );
+        }
+      }
+    } on Object catch (error) {
+      if (!isClosed) {
+        emit(
+          state.copyWith(
+            isRefreshing: false,
+            refreshFailure: SupabaseFailureMapper.from(error),
+            refreshSucceeded: false,
+          ),
+        );
+      }
     }
-    await reload();
   }
 
   Future<void> loadNextPage() async {
-    if (!state.isServerBacked || state.isLoading || state.isLoadingMore) return;
+    if (!state.isServerBacked ||
+        state.isLoading ||
+        state.isLoadingMore ||
+        state.isRefreshing) {
+      return;
+    }
     final cursor = state.nextCursor;
     if (cursor == null) return;
     final query = _remoteQuery(cursor: cursor);
     if (query == null) return;
     final revision = _requestRevision;
-    emit(state.copyWith(isLoadingMore: true, clearFailure: true));
-    final result = await _repository!.fetchItems(query);
+    emit(state.copyWith(isLoadingMore: true, clearLoadMoreFailure: true));
+    late final DataResult<PageResult<InventoryItem>> result;
+    try {
+      result = await _repository!.fetchItems(query);
+    } on Object catch (error) {
+      if (!isClosed && revision == _requestRevision) {
+        emit(
+          state.copyWith(
+            isLoadingMore: false,
+            loadMoreFailure: SupabaseFailureMapper.from(error),
+          ),
+        );
+      }
+      return;
+    }
     if (isClosed || revision != _requestRevision) return;
     switch (result) {
       case DataSuccess(:final value):
@@ -223,11 +313,12 @@ class InventoryCubit extends Cubit<InventoryState> {
             nextCursor: value.nextCursor,
             clearNextCursor: value.nextCursor == null,
             clearFailure: true,
+            clearLoadMoreFailure: true,
             isLoadingMore: false,
           ),
         );
       case DataError(:final failure):
-        emit(state.copyWith(failure: failure, isLoadingMore: false));
+        emit(state.copyWith(loadMoreFailure: failure, isLoadingMore: false));
     }
   }
 
@@ -236,6 +327,8 @@ class InventoryCubit extends Cubit<InventoryState> {
     _invalidateRequests();
     emit(
       updated.copyWith(
+        items: state.isServerBacked ? const [] : null,
+        isLoading: state.isServerBacked ? true : null,
         clearFailure: true,
         clearNextCursor: true,
         isLoadingMore: false,
@@ -278,6 +371,7 @@ class InventoryCubit extends Cubit<InventoryState> {
   @override
   Future<void> close() {
     _searchTimer?.cancel();
+    _cacheSubscription?.cancel();
     _invalidateRequests();
     return super.close();
   }

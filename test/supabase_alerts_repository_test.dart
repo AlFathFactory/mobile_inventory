@@ -231,10 +231,10 @@ void main() {
     );
   });
 
-  test('uses PreviewData only when no Supabase client is configured', () {
+  test('does not use PreviewData when no Supabase client is configured', () {
     expect(
       AlertsRepositoryFactory.create(null),
-      isA<PreviewAlertsRepository>(),
+      isNot(isA<PreviewAlertsRepository>()),
     );
 
     final client = SupabaseClient(

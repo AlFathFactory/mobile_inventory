@@ -1,13 +1,29 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:http/http.dart' show ClientException;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../repositories/data_result.dart';
+import 'supabase_bootstrap.dart';
 
 abstract final class SupabaseFailureMapper {
   static DataFailure from(Object error) {
-    if (error is TimeoutException || error is ClientException) {
+    if (error is SupabaseConfigurationException) {
+      return const DataFailure(
+        kind: DataFailureKind.unavailable,
+        message: 'إعدادات خدمة البيانات غير مكتملة.',
+      );
+    }
+    if (error is SupabaseConnectionException) {
+      return const DataFailure(
+        kind: DataFailureKind.offline,
+        message: 'تعذر الاتصال بخدمة البيانات.',
+      );
+    }
+    if (error is TimeoutException ||
+        error is ClientException ||
+        error is SocketException) {
       return const DataFailure(
         kind: DataFailureKind.offline,
         message: 'Unable to reach the data service.',

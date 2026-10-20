@@ -58,34 +58,39 @@ class AppRouter {
              ? (() => DateTime(2026, 8, 16))
              : DateTime.now,
        ) {
-    unawaited(
-      dashboardCubit.load(
-        delay:
-            dashboardRepository == null ||
-                dashboardRepository is PreviewDashboardRepository
-            ? previewLoadDelay
-            : Duration.zero,
-      ),
-    );
-    unawaited(inventoryCubit.loadPreviewData(delay: previewLoadDelay));
-    unawaited(
-      alertsCubit.load(
-        delay:
-            alertsRepository == null ||
-                alertsRepository is PreviewAlertsRepository
-            ? previewLoadDelay
-            : Duration.zero,
-      ),
-    );
-    unawaited(
-      reportsCubit.load(
-        delay:
-            reportsRepository == null ||
-                reportsRepository is PreviewReportsRepository
-            ? previewLoadDelay
-            : Duration.zero,
-      ),
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      scheduleMicrotask(() {
+        if (_disposed) return;
+        unawaited(
+          dashboardCubit.load(
+            delay:
+                dashboardRepository == null ||
+                    dashboardRepository is PreviewDashboardRepository
+                ? previewLoadDelay
+                : Duration.zero,
+          ),
+        );
+        unawaited(inventoryCubit.loadPreviewData(delay: previewLoadDelay));
+        unawaited(
+          alertsCubit.load(
+            delay:
+                alertsRepository == null ||
+                    alertsRepository is PreviewAlertsRepository
+                ? previewLoadDelay
+                : Duration.zero,
+          ),
+        );
+        unawaited(
+          reportsCubit.load(
+            delay:
+                reportsRepository == null ||
+                    reportsRepository is PreviewReportsRepository
+                ? previewLoadDelay
+                : Duration.zero,
+          ),
+        );
+      });
+    });
   }
 
   final rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -96,6 +101,7 @@ class AppRouter {
   final MovementHistoryRepository movementHistoryRepository;
   final ReportsCubit reportsCubit;
   bool _isOpeningItem = false;
+  bool _disposed = false;
 
   late final GoRouter router = GoRouter(
     navigatorKey: rootNavigatorKey,
@@ -103,10 +109,8 @@ class AppRouter {
     errorBuilder: (context, state) => const NotFoundView(),
     routes: [
       StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) => AppShell(
-          navigationShell: navigationShell,
-          inventoryCubit: inventoryCubit,
-        ),
+        builder: (context, state, navigationShell) =>
+            AppShell(navigationShell: navigationShell),
         branches: [
           StatefulShellBranch(
             routes: [
@@ -223,11 +227,7 @@ class AppRouter {
         repository: repository ?? const PreviewInventoryRepository(),
       );
     }
-    return InventoryCubit(
-      items: PreviewData.catalogItems,
-      repository: repository,
-      serverBacked: true,
-    );
+    return InventoryCubit(repository: repository, serverBacked: true);
   }
 
   InventoryItem? _findItem(String? routeId) {
@@ -238,8 +238,10 @@ class AppRouter {
         return item;
       }
     }
-    for (final item in PreviewData.items) {
-      if (item.routeId == routeId) return item;
+    if (!inventoryCubit.state.isServerBacked) {
+      for (final item in PreviewData.items) {
+        if (item.routeId == routeId) return item;
+      }
     }
     return null;
   }
@@ -338,6 +340,7 @@ class AppRouter {
   }
 
   void dispose() {
+    _disposed = true;
     router.dispose();
     dashboardCubit.close();
     inventoryCubit.close();

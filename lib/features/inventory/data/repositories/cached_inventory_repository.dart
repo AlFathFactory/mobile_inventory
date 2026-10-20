@@ -12,7 +12,10 @@ import 'inventory_repository.dart';
 
 /// Read-through inventory repository for the production Supabase mode.
 class CachedInventoryRepository
-    implements InventoryRepository, InventoryCacheRefreshable {
+    implements
+        InventoryRepository,
+        InventoryCacheRefreshable,
+        InventoryCacheReadable {
   CachedInventoryRepository({
     required InventoryLocalDataSource local,
     required InventorySyncCoordinator syncCoordinator,
@@ -21,6 +24,16 @@ class CachedInventoryRepository
 
   final InventoryLocalDataSource _local;
   final InventorySyncCoordinator _syncCoordinator;
+  final StreamController<InventoryCacheEvent> _cacheEvents =
+      StreamController<InventoryCacheEvent>.broadcast();
+  bool _automaticSyncStarted = false;
+
+  @override
+  Stream<InventoryCacheEvent> get cacheEvents => _cacheEvents.stream;
+
+  @override
+  Future<DateTime?> lastSuccessfulSync() async =>
+      (await _local.readSnapshot())?.metadata.lastSuccessfulSync;
 
   @override
   Future<DataResult<List<String>>> fetchCategories() async {
@@ -29,40 +42,51 @@ class CachedInventoryRepository
       _startBackgroundSync();
       return DataSuccess(_categories(snapshot.items));
     }
-    final result = await _syncCoordinator.syncIfStale();
-    if (!result.isSuccess) {
-      return DataError(SupabaseFailureMapper.from(result.error!));
-    }
-    final refreshed = await _local.readSnapshot();
-    return DataSuccess(_categories(refreshed?.items ?? const []));
+    // Categories are optional for the first page. Never hold it behind a full
+    // snapshot download.
+    return const DataSuccess([]);
   }
 
   @override
   Future<DataResult<PageResult<InventoryItem>>> fetchItems(
     InventoryQuery query,
   ) async {
-    var snapshot = await _local.readSnapshot();
+    final snapshot = await _local.readSnapshot();
     if (snapshot == null) {
-      final result = await _syncCoordinator.syncIfStale();
-      if (!result.isSuccess) {
-        return DataError(SupabaseFailureMapper.from(result.error!));
+      try {
+        final firstPage = await _syncCoordinator.fetchPage(query);
+        _startBackgroundSync();
+        return DataSuccess(firstPage);
+      } on Object catch (error) {
+        return DataError(SupabaseFailureMapper.from(error));
       }
-      snapshot = await _local.readSnapshot();
-    } else {
-      _startBackgroundSync();
     }
+    _startBackgroundSync();
     return DataSuccess(_page(snapshot, query));
   }
 
   @override
   Future<void> refreshCache() async {
-    await _syncCoordinator.syncIfStale(force: true);
+    final result = await _syncCoordinator.syncIfStale(force: true);
+    if (!result.isSuccess) throw result.error!;
   }
 
   void _startBackgroundSync() {
-    // Deliberately not awaited: valid cached content remains available while
-    // a stale snapshot refreshes.
-    unawaited(_syncCoordinator.syncIfStale());
+    if (_automaticSyncStarted) return;
+    _automaticSyncStarted = true;
+    unawaited(
+      _syncCoordinator.syncIfStale().then((result) {
+        if (result.didSync) {
+          _cacheEvents.add(
+            InventoryCacheEvent(
+              failure: result.isSuccess
+                  ? null
+                  : SupabaseFailureMapper.from(result.error!),
+            ),
+          );
+        }
+      }),
+    );
   }
 
   List<String> _categories(List<InventoryItem> items) =>

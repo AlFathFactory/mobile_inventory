@@ -2,6 +2,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../config/supabase_config.dart';
 
+class SupabaseConfigurationException implements Exception {
+  const SupabaseConfigurationException();
+}
+
+class SupabaseConnectionException implements Exception {
+  const SupabaseConnectionException();
+}
+
 abstract final class SupabaseBootstrap {
   /// Initializes the official client only when build-time values are present.
   /// Returning the client supports constructor injection into future Supabase

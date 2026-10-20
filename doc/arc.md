@@ -8,11 +8,11 @@ This document is both the project README and the handoff guide for future develo
 
 - Flutter application with Material 3 UI.
 - Arabic-only UI rendered right-to-left.
-- Preview data remains available when Supabase is not configured; configured builds use read-only Supabase repositories.
+- Preview data is an explicit app/test mode. Production repository factories return unavailable states when the Supabase client is absent.
 - Inventory has a Hive CE read-through cache with complete, versioned snapshots.
 - State is managed by feature Cubits and `flutter_bloc`.
 - Navigation is handled by `go_router` with a state-preserving four-tab shell.
-- A simulated 650 ms initial load drives an app-wide skeleton effect.
+- The Flutter shell renders independently of inventory and other feature requests.
 - Unit/controller tests and widget/navigation tests are included.
 
 ## Quick start
@@ -32,7 +32,7 @@ flutter run
 Validate changes:
 
 ```bash
-dart format lib test
+dart format .
 flutter analyze
 flutter test
 ```
@@ -45,7 +45,7 @@ The intentionally small dependency set is declared in `pubspec.yaml`:
 | --- | --- |
 | `flutter_localizations` | Arabic Material, Widgets, and Cupertino localization delegates |
 | `go_router` | Named routes, nested detail routes, and the stateful bottom-tab shell |
-| `skeletonizer` | App-wide skeleton loading effect |
+| `skeletonizer` | Feature-level loading presentation |
 | `cupertino_icons` | Standard icon asset package |
 | `flutter_lints` | Analyzer lint baseline used by `analysis_options.yaml` |
 | `hive_ce`, `hive_ce_flutter` | Typed, versioned local snapshots for production inventory reads |
@@ -84,6 +84,11 @@ snapshot avoids another full download when the inventory screen reopens.
 Cached content is returned immediately while stale content refreshes in the
 background. The Cubit's refresh entry point forces a complete refresh.
 
+On a cold cache, the requested server page (20 items by default) is returned
+before the full snapshot completes. When possible, the unfiltered first page
+seeds the snapshot download. The list requests more pages only from its
+explicit Load More action. A failed later page keeps its cursor for retry.
+
 Schema version mismatches explicitly invalidate the active generation. Old
 records are retained until a replacement commits, then cleaned up as a
 non-critical follow-up. Cache invalidation therefore never deletes the last
@@ -107,7 +112,7 @@ el_fateh/
 ├── assets/
 │   └── fonts/                       # IBM Plex Sans Arabic: Light, Medium, Bold
 ├── lib/
-│   ├── main.dart                    # Flutter entry point; runs MyApp
+│   ├── main.dart                    # Flutter entry point and recoverable production startup
 │   ├── app.dart                     # MaterialApp.router, theme, locale, RTL direction
 │   ├── core/
 │   │   ├── data/
@@ -115,7 +120,7 @@ el_fateh/
 │   │   ├── router/
 │   │   │   ├── app_router.dart      # Controllers, route graph, view wiring, disposal
 │   │   │   ├── app_routes.dart      # Central route names and top-level paths
-│   │   │   ├── app_shell.dart       # Tab shell, bottom navigation, skeleton wrapper
+│   │   │   ├── app_shell.dart       # Tab shell and bottom navigation
 │   │   │   └── not_found_view.dart  # Invalid route/item fallback
 │   │   ├── theme/
 │   │   │   ├── app_colors.dart      # Application color tokens
@@ -145,10 +150,11 @@ The app uses a lightweight feature-first architecture:
 
 ```text
 main()
+  -> ProductionStartup (Flutter loading/error state, Hive, async Supabase)
   -> MyApp
      -> AppTheme.light
      -> AppRouter
-        -> creates long-lived controllers from PreviewData
+        -> creates long-lived feature Cubits from injected repositories
         -> configures GoRouter
         -> injects data/controllers/callbacks into feature views
            -> views listen to controllers
@@ -157,12 +163,11 @@ main()
 
 ### Startup and lifetime
 
-1. `main.dart` calls `runApp(const MyApp())`.
-2. `MyApp` creates one `AppRouter` for the widget's lifetime.
-3. `AppRouter` creates `InventoryController`, `AlertsController`, and `ReportsController` directly. There is no service locator or dependency-injection package.
-4. Controllers receive subsets of `PreviewData` and remain alive while the app is alive.
-5. `AppRouter` starts `InventoryController.loadPreviewData()`. Its loading flag is also used by `AppShell` to skeletonize every tab.
-6. When `MyApp` is disposed, `AppRouter.dispose()` disposes the router and all three controllers.
+1. `main.dart` initializes Flutter bindings and immediately calls `runApp(const ProductionStartup())`.
+2. `ProductionStartup` opens Hive CE independently, recovers interrupted metadata, and renders a retry screen if local initialization fails. Supabase initializes asynchronously and cannot hold the native splash.
+3. `MyApp` creates one `AppRouter` for its widget lifetime. Production repository factories inject unavailable implementations until a client is ready; preview fixtures remain explicit.
+4. `AppRouter` owns long-lived feature Cubits and starts their loads after the first Flutter frame without awaiting network work. A feature failure does not block the shell or another route.
+5. When `MyApp` is disposed, `AppRouter.dispose()` disposes the router and feature Cubits.
 
 This ownership is important: do not create a new controller inside a feature view on every build. Router-level controller lifetime is why search/filter state survives tab changes.
 

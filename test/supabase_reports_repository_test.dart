@@ -170,10 +170,10 @@ void main() {
     }
   });
 
-  test('selects preview only without a Supabase client', () {
+  test('does not select preview without a Supabase client', () {
     expect(
       ReportsRepositoryFactory.create(null),
-      isA<PreviewReportsRepository>(),
+      isNot(isA<PreviewReportsRepository>()),
     );
     final client = SupabaseClient(
       'https://example.supabase.co',

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:el_fateh/core/data/preview_data.dart';
 import 'package:el_fateh/core/data/repositories/data_result.dart';
@@ -122,14 +123,94 @@ void main() {
         PreviewData.catalogItems[1].routeId,
       );
     });
+
+    test('a failed next page keeps its cursor and can be retried', () async {
+      final cursors = <String?>[];
+      var attempts = 0;
+      final cubit = InventoryCubit(
+        serverBacked: true,
+        initiallyLoading: false,
+        repository: _FakeInventoryRepository((query) {
+          cursors.add(query.page.cursor);
+          if (query.page.cursor == null) {
+            return DataSuccess(
+              PageResult(items: [PreviewData.catalogItems[0]], nextCursor: '1'),
+            );
+          }
+          attempts++;
+          return attempts == 1
+              ? const DataError(
+                  DataFailure(
+                    kind: DataFailureKind.offline,
+                    message: 'offline',
+                  ),
+                )
+              : DataSuccess(
+                  PageResult(
+                    items: [
+                      PreviewData.catalogItems[0],
+                      PreviewData.catalogItems[1],
+                    ],
+                  ),
+                );
+        }),
+      );
+      addTearDown(cubit.close);
+
+      await cubit.reload();
+      await cubit.loadNextPage();
+      expect(cubit.state.loadMoreFailure, isNotNull);
+      expect(cubit.state.nextCursor, '1');
+      expect(cubit.state.items, hasLength(1));
+
+      await cubit.loadNextPage();
+      expect(cursors, [null, '1', '1']);
+      expect(cubit.state.items, hasLength(2));
+      expect(
+        cubit.state.items.map((item) => item.routeId).toSet(),
+        hasLength(2),
+      );
+      expect(cubit.state.hasMore, isFalse);
+    });
+
+    test('failed manual refresh preserves the visible list', () async {
+      final refresh = Completer<void>();
+      final repository = _FakeInventoryRepository(
+        (_) => DataSuccess(PageResult(items: [PreviewData.catalogItems[0]])),
+        refresh: () => refresh.future,
+      );
+      final cubit = InventoryCubit(
+        serverBacked: true,
+        initiallyLoading: false,
+        repository: repository,
+      );
+      addTearDown(cubit.close);
+      await cubit.reload();
+
+      unawaited(cubit.refresh());
+      expect(cubit.state.isRefreshing, isTrue);
+      expect(cubit.state.items, hasLength(1));
+      refresh.completeError(const SocketException('offline'));
+      await Future<void>.delayed(Duration.zero);
+
+      expect(cubit.state.isRefreshing, isFalse);
+      expect(cubit.state.refreshFailure?.kind, DataFailureKind.offline);
+      expect(cubit.state.items, hasLength(1));
+    });
   });
 }
 
-class _FakeInventoryRepository implements InventoryRepository {
-  _FakeInventoryRepository(this._fetch);
+class _FakeInventoryRepository
+    implements InventoryRepository, InventoryCacheRefreshable {
+  _FakeInventoryRepository(this._fetch, {Future<void> Function()? refresh})
+    : _refresh = refresh;
 
   final FutureOr<DataResult<PageResult<InventoryItem>>> Function(InventoryQuery)
   _fetch;
+  final Future<void> Function()? _refresh;
+
+  @override
+  Future<void> refreshCache() => _refresh?.call() ?? Future.value();
 
   @override
   Future<DataResult<PageResult<InventoryItem>>> fetchItems(

@@ -1,8 +1,7 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/data/repositories/data_result.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/widgets/responsive_page.dart';
 import '../cubit/inventory_cubit.dart';
@@ -30,13 +29,6 @@ class _InventoryViewState extends State<InventoryView> {
   late final TextEditingController _searchController = TextEditingController(
     text: context.read<InventoryCubit>().state.query,
   );
-  late final ScrollController _scrollController = ScrollController()
-    ..addListener(_loadNextPageNearEnd);
-
-  @override
-  void initState() {
-    super.initState();
-  }
 
   void _syncSearchText() {
     final query = context.read<InventoryCubit>().state.query;
@@ -47,18 +39,9 @@ class _InventoryViewState extends State<InventoryView> {
     );
   }
 
-  void _loadNextPageNearEnd() {
-    if (!_scrollController.hasClients ||
-        _scrollController.position.extentAfter > 320) {
-      return;
-    }
-    unawaited(context.read<InventoryCubit>().loadNextPage());
-  }
-
   @override
   void dispose() {
     _searchController.dispose();
-    _scrollController.dispose();
     super.dispose();
   }
 
@@ -76,18 +59,54 @@ class _InventoryViewState extends State<InventoryView> {
         child: BlocBuilder<InventoryCubit, InventoryState>(
           builder: (context, state) {
             final isLoading = state.isLoading;
-            final items = isLoading
-                ? state.items.take(5).toList(growable: false)
-                : state.visibleItems;
+            final items = state.visibleItems;
             return CustomScrollView(
               key: const PageStorageKey('inventory-list'),
-              controller: _scrollController,
               slivers: [
                 SliverToBoxAdapter(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       InventoryHeader(totalCount: state.items.length),
+                      if (state.isCached) ...[
+                        const SizedBox(height: AppDimensions.space8),
+                        Text(
+                          'تُعرض بيانات المخزون المحفوظة على هذا الجهاز'
+                          '${state.lastSuccessfulSync == null ? '' : ' · آخر مزامنة: ${state.lastSuccessfulSync!.toLocal()}'}',
+                        ),
+                      ],
+                      if (state.refreshFailure != null ||
+                          (state.failure != null && items.isNotEmpty))
+                        const Padding(
+                          padding: EdgeInsets.only(top: 8),
+                          child: Text(
+                            'تعذر تحديث البيانات. قد تكون النسخة المعروضة قديمة.',
+                          ),
+                        ),
+                      if (state.refreshSucceeded == true)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 8),
+                          child: Text('تم تحديث بيانات المخزون'),
+                        ),
+                      if (state.isServerBacked &&
+                          (items.isNotEmpty || state.isCached)) ...[
+                        const SizedBox(height: AppDimensions.space8),
+                        OutlinedButton.icon(
+                          onPressed: state.isRefreshing
+                              ? null
+                              : () => context.read<InventoryCubit>().refresh(),
+                          icon: state.isRefreshing
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.refresh),
+                          label: const Text('تحديث'),
+                        ),
+                      ],
                       const SizedBox(height: AppDimensions.space16),
                       InventorySearchToolbar(
                         controller: _searchController,
@@ -122,7 +141,41 @@ class _InventoryViewState extends State<InventoryView> {
                     ],
                   ),
                 ),
-                if (items.isEmpty)
+                if (isLoading && items.isEmpty)
+                  const SliverToBoxAdapter(
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (state.failure != null && items.isEmpty)
+                  SliverToBoxAdapter(
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Text(switch (state.failure!.kind) {
+                            DataFailureKind.offline =>
+                              'لا يوجد اتصال بالإنترنت',
+                            DataFailureKind.unavailable =>
+                              'تعذر الوصول إلى خدمة البيانات',
+                            _ => 'تعذر تحميل المخزون',
+                          }),
+                          const SizedBox(height: 8),
+                          Text(
+                            state.failure!.kind == DataFailureKind.offline
+                                ? 'لا توجد بيانات مخزون محفوظة على هذا الجهاز حتى الآن. اتصل بالإنترنت وحاول مرة أخرى.'
+                                : state.failure!.message,
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 12),
+                          FilledButton(
+                            onPressed: state.isLoading
+                                ? null
+                                : () => context.read<InventoryCubit>().retry(),
+                            child: const Text('إعادة المحاولة'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else if (items.isEmpty)
                   SliverToBoxAdapter(
                     child: InventoryEmptyState(query: state.query),
                   )
@@ -140,6 +193,26 @@ class _InventoryViewState extends State<InventoryView> {
                         onTap: () => widget.onOpenItem(item),
                       );
                     },
+                  ),
+                if (state.isLoadingMore)
+                  const SliverToBoxAdapter(
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (state.hasMore)
+                  SliverToBoxAdapter(
+                    child: Center(
+                      child: OutlinedButton(
+                        onPressed: state.isRefreshing
+                            ? null
+                            : () =>
+                                  context.read<InventoryCubit>().loadNextPage(),
+                        child: Text(
+                          state.loadMoreFailure == null
+                              ? 'عرض المزيد'
+                              : 'تعذر تحميل المزيد، إعادة المحاولة',
+                        ),
+                      ),
+                    ),
                   ),
                 SliverPadding(
                   padding: EdgeInsets.only(

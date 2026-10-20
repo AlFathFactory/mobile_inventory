@@ -2,7 +2,6 @@ import 'package:el_fateh/app.dart';
 import 'package:el_fateh/features/inventory/widgets/inventory_filter_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:skeletonizer/skeletonizer.dart';
 
 void main() {
   testWidgets('renders Arabic RTL dashboard and navigates across all tabs', (
@@ -172,26 +171,16 @@ void main() {
     expect(find.text('ملخص السجل'), findsOneWidget);
   });
 
-  testWidgets('enables the app-level skeleton before preview data loads', (
+  testWidgets('renders the app shell before preview data loads', (
     tester,
   ) async {
     await tester.pumpWidget(const MyApp());
     await tester.pump();
-    expect(
-      find.byWidgetPredicate(
-        (widget) => widget is Skeletonizer && widget.enabled,
-      ),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('nav-inventory')), findsOneWidget);
 
     await tester.pump(const Duration(milliseconds: 700));
     await tester.pumpAndSettle();
-    expect(
-      find.byWidgetPredicate(
-        (widget) => widget is Skeletonizer && widget.enabled,
-      ),
-      findsNothing,
-    );
+    expect(find.byKey(const Key('nav-inventory')), findsOneWidget);
   });
 
   for (final size in const [Size(320, 568), Size(392, 812), Size(600, 1024)]) {

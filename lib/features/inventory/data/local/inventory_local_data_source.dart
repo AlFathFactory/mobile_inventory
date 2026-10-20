@@ -167,13 +167,30 @@ class HiveInventoryLocalDataSource implements InventoryLocalDataSource {
   @override
   Future<void> recoverInterruptedSync() async {
     final metadata = _metadata;
-    if (metadata?.syncInProgress != true) return;
-    final updated = metadata!.copyWith(
-      syncInProgress: false,
-      lastFailure: 'interrupted',
-    );
-    await _writeMetadata(updated);
-    _updateInMemoryMetadata(updated);
+    if (metadata?.syncInProgress == true) {
+      final updated = metadata!.copyWith(
+        syncInProgress: false,
+        lastFailure: 'interrupted',
+      );
+      await _writeMetadata(updated);
+      _updateInMemoryMetadata(updated);
+    }
+    // Interrupted writes may leave unreachable rows. Keep only the committed
+    // generation; cleanup failure cannot invalidate it.
+    final committed = metadata?.isComplete == true
+        ? metadata!.generation
+        : null;
+    final staleKeys = _database.inventorySnapshots.keys
+        .whereType<String>()
+        .where((key) => committed == null || !key.startsWith('$committed::'))
+        .toList(growable: false);
+    if (staleKeys.isNotEmpty) {
+      try {
+        await _database.inventorySnapshots.deleteAll(staleKeys);
+      } on Object {
+        // A later startup or successful replacement can retry cleanup.
+      }
+    }
   }
 
   @override

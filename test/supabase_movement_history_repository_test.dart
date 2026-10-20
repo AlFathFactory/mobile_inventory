@@ -279,10 +279,10 @@ void main() {
     });
   });
 
-  test('selects PreviewData only when no Supabase client is configured', () {
+  test('does not select PreviewData without a Supabase client', () {
     expect(
       MovementHistoryRepositoryFactory.create(null),
-      isA<PreviewInventoryRepository>(),
+      isNot(isA<PreviewInventoryRepository>()),
     );
 
     final client = SupabaseClient(

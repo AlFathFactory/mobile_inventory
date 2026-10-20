@@ -266,10 +266,10 @@ void main() {
     );
   });
 
-  test('uses PreviewData only when no Supabase client is configured', () {
+  test('does not use PreviewData when no Supabase client is configured', () {
     expect(
       InventoryRepositoryFactory.create(null),
-      isA<PreviewInventoryRepository>(),
+      isNot(isA<PreviewInventoryRepository>()),
     );
 
     final client = SupabaseClient(

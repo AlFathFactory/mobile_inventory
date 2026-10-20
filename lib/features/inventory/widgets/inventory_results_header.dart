@@ -22,7 +22,7 @@ class InventoryResultsHeader extends StatelessWidget {
             children: [
               Flexible(
                 child: Text(
-                  hasFilters ? 'النتائج' : 'كل الأصناف',
+                  hasFilters ? 'النتائج المعروضة' : 'الأصناف المعروضة',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.cardTitle,

@@ -191,10 +191,10 @@ void main() {
   });
 
   group('dashboard fallback and failures', () {
-    test('uses PreviewData only when no Supabase client is configured', () {
+    test('does not use PreviewData when no Supabase client is configured', () {
       expect(
         DashboardRepositoryFactory.create(null),
-        isA<PreviewDashboardRepository>(),
+        isNot(isA<PreviewDashboardRepository>()),
       );
 
       final client = SupabaseClient(

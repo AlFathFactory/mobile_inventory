@@ -40,10 +40,43 @@ class InventorySyncCoordinator {
   final Duration maxCacheAge;
   Future<InventorySyncResult>? _inFlight;
   bool _recovered = false;
+  _InventoryFirstPage? _firstPage;
+
+  Future<PageResult<InventoryItem>> fetchPage(InventoryQuery query) async {
+    final remoteQuery = InventoryRemoteQuery.fromInventoryQuery(query);
+    final rows = await _remote
+        .fetchItems(remoteQuery)
+        .timeout(const Duration(seconds: 12));
+    final hasMore = rows.length > remoteQuery.pageSize;
+    final page = PageResult<InventoryItem>(
+      items: rows
+          .take(remoteQuery.pageSize)
+          .map(InventoryItem.fromInventorySummaryRow)
+          .toList(growable: false),
+      nextCursor: hasMore
+          ? '${remoteQuery.offset + remoteQuery.pageSize}'
+          : null,
+    );
+    if (remoteQuery.offset == 0 &&
+        query.search.isEmpty &&
+        query.categories.isEmpty &&
+        query.projects.isEmpty &&
+        query.statuses.isEmpty) {
+      _firstPage = _InventoryFirstPage(page.items, hasMore);
+    }
+    return page;
+  }
 
   Future<InventorySyncResult> syncIfStale({bool force = false}) {
     final running = _inFlight;
-    if (running != null) return running;
+    if (running != null) {
+      if (!force) return running;
+      return running.then(
+        (result) => result.isSuccess && result.didSync
+            ? result
+            : syncIfStale(force: true),
+      );
+    }
     final job = _sync(force: force);
     _inFlight = job;
     return job.whenComplete(() {
@@ -52,36 +85,55 @@ class InventorySyncCoordinator {
   }
 
   Future<InventorySyncResult> _sync({required bool force}) async {
-    if (!_recovered) {
-      await _local.recoverInterruptedSync();
-      _recovered = true;
-    }
-    final snapshot = await _local.readSnapshot();
-    if (!force && snapshot?.metadata.isFresh(maxCacheAge, _clock()) == true) {
-      return const InventorySyncResult.success(didSync: false);
-    }
-
     try {
+      if (!_recovered) {
+        await _local.recoverInterruptedSync();
+        _recovered = true;
+      }
+      final snapshot = await _local.readSnapshot();
+      if (!force && snapshot?.metadata.isFresh(maxCacheAge, _clock()) == true) {
+        return const InventorySyncResult.success(didSync: false);
+      }
       await _local.markSyncStarted();
       final items = <InventoryItem>[];
       var offset = 0;
-      while (true) {
+      final firstPage = snapshot == null ? _firstPage : null;
+      _firstPage = null;
+      if (firstPage != null) {
+        items.addAll(firstPage.items);
+        offset = firstPage.items.length;
+      }
+      var hasMore = firstPage?.hasMore ?? true;
+      while (hasMore) {
         final remoteQuery = InventoryRemoteQuery.fromInventoryQuery(
           InventoryQuery(
             page: PageRequest(limit: pageSize, cursor: '$offset'),
           ),
         );
-        final rows = await _remote.fetchItems(remoteQuery);
+        final rows = await _remote
+            .fetchItems(remoteQuery)
+            .timeout(const Duration(seconds: 12));
         final page = rows.take(pageSize);
         items.addAll(page.map(InventoryItem.fromInventorySummaryRow));
-        if (rows.length <= pageSize) break;
-        offset += pageSize;
+        hasMore = rows.length > pageSize;
+        offset += page.length;
       }
       await _local.replaceSnapshot(items, _clock());
       return const InventorySyncResult.success(didSync: true);
     } on Object catch (error) {
-      await _local.markSyncFailed(error);
+      try {
+        await _local.markSyncFailed(error);
+      } on Object {
+        // Preserve the request failure; the committed generation is intact.
+      }
       return InventorySyncResult.failure(error);
     }
   }
+}
+
+class _InventoryFirstPage {
+  const _InventoryFirstPage(this.items, this.hasMore);
+
+  final List<InventoryItem> items;
+  final bool hasMore;
 }

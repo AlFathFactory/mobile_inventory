@@ -12,6 +12,12 @@ class InventoryState {
     required this.isServerBacked,
     this.isLoading = true,
     this.isLoadingMore = false,
+    this.isRefreshing = false,
+    this.isCached = false,
+    this.lastSuccessfulSync,
+    this.refreshFailure,
+    this.refreshSucceeded,
+    this.loadMoreFailure,
     this.nextCursor,
     this.failure,
     this.query = '',
@@ -25,6 +31,12 @@ class InventoryState {
   final bool isServerBacked;
   final bool isLoading;
   final bool isLoadingMore;
+  final bool isRefreshing;
+  final bool isCached;
+  final DateTime? lastSuccessfulSync;
+  final DataFailure? refreshFailure;
+  final bool? refreshSucceeded;
+  final DataFailure? loadMoreFailure;
   final String? nextCursor;
   final DataFailure? failure;
   final String query;
@@ -76,6 +88,15 @@ class InventoryState {
     List<InventoryItem>? items,
     bool? isLoading,
     bool? isLoadingMore,
+    bool? isRefreshing,
+    bool? isCached,
+    DateTime? lastSuccessfulSync,
+    DataFailure? refreshFailure,
+    bool clearRefreshFailure = false,
+    bool? refreshSucceeded,
+    bool clearRefreshResult = false,
+    DataFailure? loadMoreFailure,
+    bool clearLoadMoreFailure = false,
     String? nextCursor,
     bool clearNextCursor = false,
     DataFailure? failure,
@@ -90,6 +111,18 @@ class InventoryState {
     isServerBacked: isServerBacked,
     isLoading: isLoading ?? this.isLoading,
     isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+    isRefreshing: isRefreshing ?? this.isRefreshing,
+    isCached: isCached ?? this.isCached,
+    lastSuccessfulSync: lastSuccessfulSync ?? this.lastSuccessfulSync,
+    refreshFailure: clearRefreshFailure
+        ? null
+        : (refreshFailure ?? this.refreshFailure),
+    refreshSucceeded: clearRefreshResult
+        ? null
+        : (refreshSucceeded ?? this.refreshSucceeded),
+    loadMoreFailure: clearLoadMoreFailure
+        ? null
+        : (loadMoreFailure ?? this.loadMoreFailure),
     nextCursor: clearNextCursor ? null : (nextCursor ?? this.nextCursor),
     failure: clearFailure ? null : (failure ?? this.failure),
     query: query ?? this.query,
