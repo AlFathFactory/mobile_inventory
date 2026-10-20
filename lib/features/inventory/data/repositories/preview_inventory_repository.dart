@@ -1,6 +1,7 @@
 import '../../../../core/data/preview_data.dart';
 import '../../../../core/data/repositories/data_result.dart';
 import '../../../../core/data/repositories/page.dart';
+import '../../../../core/utils/search_normalizer.dart';
 import '../../model/inventory_item.dart';
 import '../../model/inventory_movement.dart';
 import '../models/inventory_query.dart';
@@ -26,13 +27,19 @@ class PreviewInventoryRepository
   Future<DataResult<PageResult<InventoryItem>>> fetchItems(
     InventoryQuery query,
   ) async {
-    final search = query.search.trim().toLowerCase();
+    final search = normalizeSearchTerm(query.search);
     final items = PreviewData.catalogItems
         .where((item) {
-          final matchesSearch =
-              search.isEmpty ||
-              item.name.toLowerCase().contains(search) ||
-              item.code.toLowerCase().contains(search);
+          final matchesSearch = matchesAnySearchValue([
+            item.name,
+            item.code,
+            item.codeNumber,
+            item.itemKey,
+            item.supplier,
+            item.project,
+            item.category,
+            item.din,
+          ], search);
           final matchesStatus =
               query.statuses.isEmpty || query.statuses.contains(item.status);
           final matchesCategory =

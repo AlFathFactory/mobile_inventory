@@ -12,6 +12,32 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('InventoryCubit', () {
+    test(
+      'keeps typed text and deduplicates equivalent live searches',
+      () async {
+        final queries = <InventoryQuery>[];
+        final cubit = InventoryCubit(
+          items: const [],
+          serverBacked: true,
+          initiallyLoading: false,
+          searchDebounce: const Duration(milliseconds: 1),
+          repository: _FakeInventoryRepository((query) {
+            queries.add(query);
+            return DataSuccess(PageResult<InventoryItem>(items: []));
+          }),
+        );
+        addTearDown(cubit.close);
+
+        cubit.setQuery('\u0639\u0628\u0648\u0629 WD 40');
+        cubit.setQuery('\u0639\u0628\u0648\u0629wd40');
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+
+        expect(cubit.state.query, '\u0639\u0628\u0648\u0629wd40');
+        expect(queries, hasLength(1));
+        expect(queries.single.search, '\u0639\u0628\u0648\u0647wd40');
+      },
+    );
+
     test('loads the preview repository fallback', () async {
       final cubit = InventoryCubit(
         items: PreviewData.catalogItems,

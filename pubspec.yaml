@@ -41,6 +41,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   http: 1.6.0
   supabase_flutter: 2.18.3
+  unorm_dart: 0.3.3
 
 dev_dependencies:
   flutter_test:

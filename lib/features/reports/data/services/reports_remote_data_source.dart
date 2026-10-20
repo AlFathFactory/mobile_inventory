@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../../core/utils/search_normalizer.dart';
+
 import '../../../inventory/model/inventory_movement.dart';
 import '../models/reports_query.dart';
 
@@ -30,7 +32,7 @@ class ReportsRemoteQuery {
     return ReportsRemoteQuery(
       offset: offset,
       pageSize: query.page.limit,
-      search: query.search.trim(),
+      search: normalizeSearchTerm(query.search),
       operationType: query.types.isEmpty
           ? null
           : switch (query.types.single) {
@@ -72,6 +74,7 @@ class ReportsRemoteQuery {
     'notes',
     'code_number',
     'internal_code',
+    'din',
   ];
   static const searchColumns = <String>[
     'item_name',
@@ -83,6 +86,7 @@ class ReportsRemoteQuery {
     'item_code',
     'code_number',
     'internal_code',
+    'din',
   ];
 
   final int offset;

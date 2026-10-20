@@ -84,7 +84,7 @@ void main() {
         expect(plan.pageSize, 20);
         expect(plan.fetchLimit, 21);
         expect(plan.rangeEnd, 60);
-        expect(plan.search, 'P-100 unsafe');
+        expect(plan.search, 'p-100 unsafe');
         expect(plan.categories, ['الدهانات', 'مستهلكات']);
         expect(plan.projects, ['Project A', 'Project B']);
         expect(plan.statuses, ['قليل', 'منتهي']);
@@ -92,8 +92,11 @@ void main() {
           'item_name',
           'internal_code',
           'code_number',
+          'item_key',
           'project_name',
           'supplier_name',
+          'category_name',
+          'din',
         ]);
         expect(
           InventoryRemoteQuery.orderColumns
@@ -168,6 +171,39 @@ void main() {
         containsPair('order', 'name.asc.nullslast'),
       );
     });
+  });
+
+  test('live inventory sends a normalized regex filter to the view', () async {
+    final requests = <Request>[];
+    final client = SupabaseClient(
+      'https://example.supabase.co',
+      'sb_publishable_example',
+      httpClient: MockClient((request) async {
+        requests.add(request);
+        return Response(
+          '[]',
+          200,
+          headers: {'content-type': 'application/json'},
+          request: request,
+        );
+      }),
+    );
+    addTearDown(client.dispose);
+
+    await SupabaseInventoryService(client).fetchItems(
+      InventoryRemoteQuery.fromInventoryQuery(
+        const InventoryQuery(
+          search:
+              '\u062d\u062c\u0631 \u0642\u0637\u0639\u064a\u0647 5 \u0628\u0648\u0635\u0629',
+        ),
+      ),
+    );
+
+    final filter = requests.single.url.queryParameters['or']!;
+    expect(filter, contains('item_name.imatch.'));
+    expect(filter, contains('item_key.imatch.'));
+    expect(filter, contains('din.imatch.'));
+    expect(filter, contains('[5\u0665\u06f5]'));
   });
 
   group('SupabaseInventoryRepository', () {

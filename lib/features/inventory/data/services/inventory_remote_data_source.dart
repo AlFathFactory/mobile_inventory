@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../../core/utils/search_normalizer.dart';
+
 import '../../model/inventory_item.dart';
 import '../models/inventory_query.dart';
 
@@ -28,7 +30,7 @@ class InventoryRemoteQuery {
       // Fetch one look-ahead row so pagination does not need an expensive
       // exact count across the unified view.
       fetchLimit: query.page.limit + 1,
-      search: _safeSearch(query.search),
+      search: _safeSearch(normalizeSearchTerm(query.search)),
       categories: _stableValues(query.categories),
       projects: _stableValues(query.projects),
       statuses: _stableValues(
@@ -56,6 +58,7 @@ class InventoryRemoteQuery {
     'created_at',
     'code_number',
     'internal_code',
+    'din',
   ];
 
   static const orderColumns = <InventoryRemoteOrder>[
@@ -68,8 +71,11 @@ class InventoryRemoteQuery {
     'item_name',
     'internal_code',
     'code_number',
+    'item_key',
     'project_name',
     'supplier_name',
+    'category_name',
+    'din',
   ];
 
   final int offset;

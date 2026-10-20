@@ -1,6 +1,7 @@
 import '../../../../core/data/preview_data.dart';
 import '../../../../core/data/repositories/data_result.dart';
 import '../../../../core/data/repositories/page.dart';
+import '../../../../core/utils/search_normalizer.dart';
 import '../../model/report_filter.dart';
 import '../models/reports_data.dart';
 import '../models/reports_query.dart';
@@ -12,16 +13,18 @@ class PreviewReportsRepository implements ReportsRepository {
 
   @override
   Future<DataResult<ReportsData>> fetchReports(ReportsQuery query) async {
-    final search = query.search.trim().toLowerCase();
+    final search = normalizeSearchTerm(query.search);
     final start = _dateOnly(query.startDate);
     final end = _dateOnly(query.endDate);
     final movements = PreviewData.reportMovements
         .where((movement) {
           final movementDate = _dateOnly(movement.date)!;
-          final matchesSearch =
-              search.isEmpty ||
-              movement.itemName.toLowerCase().contains(search) ||
-              movement.itemCode.toLowerCase().contains(search);
+          final matchesSearch = matchesAnySearchValue([
+            movement.itemName,
+            movement.itemCode,
+            movement.project,
+            movement.category,
+          ], search);
           final matchesType =
               query.types.isEmpty || query.types.contains(movement.type);
           final matchesCategory =

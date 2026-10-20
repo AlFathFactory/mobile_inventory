@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/data/repositories/data_result.dart';
 import '../../../core/data/repositories/page.dart';
+import '../../../core/utils/search_normalizer.dart';
 import '../data/models/inventory_query.dart';
 import '../data/repositories/inventory_repository.dart';
 import '../model/inventory_filter.dart';
@@ -79,6 +80,10 @@ class InventoryCubit extends Cubit<InventoryState> {
 
   void setQuery(String value) {
     if (state.query == value) return;
+    if (normalizeSearchTerm(state.query) == normalizeSearchTerm(value)) {
+      emit(state.copyWith(query: value));
+      return;
+    }
     _invalidateRequests();
     emit(
       state.copyWith(
@@ -248,7 +253,7 @@ class InventoryCubit extends Cubit<InventoryState> {
         : {state.quickStatus!};
     return InventoryQuery(
       page: PageRequest(cursor: cursor),
-      search: state.query,
+      search: normalizeSearchTerm(state.query),
       statuses: statuses,
       categories: state.filter.categories,
       projects: state.filter.projects,

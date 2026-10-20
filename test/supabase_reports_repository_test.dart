@@ -21,6 +21,41 @@ import 'package:http/testing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
+  test('equivalent Reports searches produce the same remote query', () {
+    for (final (spaced, compact) in [
+      ('\u0639\u0628\u0648\u0629 wd 40', '\u0639\u0628\u0648\u0629wd40'),
+      (
+        '\u062d\u062c\u0631 \u0642\u0637\u0639\u064a\u0647 5 \u0628\u0648\u0635\u0629',
+        '\u062d\u062c\u0631\u0642\u0637\u0639\u064a\u06475\u0628\u0648\u0635\u0647',
+      ),
+    ]) {
+      final first = ReportsRemoteQuery.fromQuery(ReportsQuery(search: spaced));
+      final second = ReportsRemoteQuery.fromQuery(
+        ReportsQuery(search: compact),
+      );
+      expect(first.search, second.search);
+      expect(first.rpcParams, second.rpcParams);
+      expect(first.safeSearch, second.safeSearch);
+    }
+  });
+
+  test(
+    'Reports Cubit keeps typed text without duplicate remote searches',
+    () async {
+      final repository = _FakeReportsRepository();
+      final cubit = ReportsCubit.withRepository(repository: repository);
+      addTearDown(cubit.close);
+
+      cubit.setQuery('\u0639\u0628\u0648\u0629 wd 40');
+      cubit.setQuery('\u0639\u0628\u0648\u0629wd40');
+      await Future<void>.delayed(const Duration(milliseconds: 350));
+
+      expect(cubit.state.query, '\u0639\u0628\u0648\u0629wd40');
+      expect(repository.queries, hasLength(1));
+      expect(repository.queries.single.search, '\u0639\u0628\u0648\u0647wd40');
+    },
+  );
+
   test('maps supported filters to the deployed RPC signature', () {
     final remote = ReportsRemoteQuery.fromQuery(
       ReportsQuery(
@@ -243,6 +278,45 @@ void main() {
     expect(requests.last.method, 'GET');
     expect(requests.last.url.queryParameters['offset'], '2');
   });
+
+  test(
+    'Reports timeline and counts share the normalized view filter',
+    () async {
+      final requests = <Request>[];
+      final client = SupabaseClient(
+        'https://example.supabase.co',
+        'sb_publishable_example',
+        httpClient: MockClient((request) async {
+          requests.add(request);
+          return Response(
+            request.method == 'HEAD' ? '' : '[]',
+            200,
+            headers: {
+              'content-type': 'application/json',
+              if (request.method == 'HEAD') 'content-range': '*/0',
+            },
+            request: request,
+          );
+        }),
+      );
+      addTearDown(client.dispose);
+
+      await SupabaseReportsService(client).fetchReports(
+        ReportsRemoteQuery.fromQuery(
+          const ReportsQuery(search: '\u0639\u0628\u0648\u0629 WD 40'),
+        ),
+      );
+
+      expect(requests, hasLength(4));
+      expect(requests.every((request) => request.method != 'POST'), isTrue);
+      final filters = requests.map(
+        (request) => request.url.queryParameters['or'],
+      );
+      expect(filters.every((filter) => filter == filters.first), isTrue);
+      expect(filters.first, contains('item_name.imatch.'));
+      expect(filters.first, contains('din.imatch.'));
+    },
+  );
 
   test('filter options use the shared active category catalog', () async {
     final requests = <Request>[];

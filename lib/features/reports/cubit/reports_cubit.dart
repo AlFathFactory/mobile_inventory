@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/data/repositories/data_result.dart';
 import '../../../core/data/repositories/load_state.dart';
 import '../../../core/data/repositories/page.dart';
+import '../../../core/utils/search_normalizer.dart';
 import '../../inventory/model/inventory_movement.dart';
 import '../data/models/reports_query.dart';
 import '../data/repositories/reports_repository.dart';
@@ -107,6 +108,10 @@ class ReportsCubit extends Cubit<ReportsState> {
 
   void setQuery(String value) {
     if (state.query == value) return;
+    if (normalizeSearchTerm(state.query) == normalizeSearchTerm(value)) {
+      emit(state.copyWith(query: value));
+      return;
+    }
     _searchTimer?.cancel();
     _revision++;
     emit(
@@ -142,6 +147,7 @@ class ReportsCubit extends Cubit<ReportsState> {
   }
 
   void _changed(ReportsState updated) {
+    _searchTimer?.cancel();
     _revision++;
     emit(
       updated.copyWith(
@@ -152,30 +158,7 @@ class ReportsCubit extends Cubit<ReportsState> {
     );
     final preview = _preview;
     if (preview != null) {
-      final query = _query();
-      final rows = preview
-          .where((row) {
-            final date = DateUtils.dateOnly(row.date);
-            final search = state.query.trim().toLowerCase();
-            return (search.isEmpty ||
-                    row.itemName.toLowerCase().contains(search) ||
-                    row.itemCode.toLowerCase().contains(search) ||
-                    row.project.toLowerCase().contains(search)) &&
-                (query.types.isEmpty || query.types.contains(row.type)) &&
-                (query.categories.isEmpty ||
-                    query.categories.contains(row.category)) &&
-                (query.projects.isEmpty ||
-                    query.projects.contains(row.project)) &&
-                (query.startDate == null || !date.isBefore(query.startDate!)) &&
-                (query.endDate == null || !date.isAfter(query.endDate!));
-          })
-          .toList(growable: false);
-      emit(
-        state.copyWith(
-          movements: rows,
-          status: rows.isEmpty ? DataLoadStatus.empty : DataLoadStatus.success,
-        ),
-      );
+      _applyPreviewQuery();
     } else {
       unawaited(_reload());
     }
@@ -185,14 +168,16 @@ class ReportsCubit extends Cubit<ReportsState> {
     final preview = _preview;
     if (preview == null) return;
     final query = _query();
-    final search = state.query.trim().toLowerCase();
+    final search = normalizeSearchTerm(state.query);
     final rows = preview
         .where((row) {
           final date = DateUtils.dateOnly(row.date);
-          return (search.isEmpty ||
-                  row.itemName.toLowerCase().contains(search) ||
-                  row.itemCode.toLowerCase().contains(search) ||
-                  row.project.toLowerCase().contains(search)) &&
+          return matchesAnySearchValue([
+                row.itemName,
+                row.itemCode,
+                row.project,
+                row.category,
+              ], search) &&
               (query.types.isEmpty || query.types.contains(row.type)) &&
               (query.categories.isEmpty ||
                   query.categories.contains(row.category)) &&
@@ -289,7 +274,7 @@ class ReportsCubit extends Cubit<ReportsState> {
     types: state.selectedType == null ? const {} : {state.selectedType!},
     categories: state.category == null ? const {} : {state.category!},
     projects: state.project == null ? const {} : {state.project!},
-    search: state.query,
+    search: normalizeSearchTerm(state.query),
     startDate: state.period == ReportPeriod.last30Days
         ? DateUtils.dateOnly(_clock().subtract(const Duration(days: 30)))
         : state.period == ReportPeriod.custom

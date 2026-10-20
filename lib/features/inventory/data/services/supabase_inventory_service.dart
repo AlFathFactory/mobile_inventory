@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/data/inventory_category_catalog.dart';
+import '../../../../core/utils/search_normalizer.dart';
 import 'inventory_remote_data_source.dart';
 
 class SupabaseInventoryService implements InventoryRemoteDataSource {
@@ -27,10 +28,10 @@ class SupabaseInventoryService implements InventoryRemoteDataSource {
         .select(InventoryRemoteQuery.selectedColumns.join(','));
 
     if (query.search.isNotEmpty) {
-      final pattern = '*${query.search}*';
+      final pattern = searchPatternForNormalizedTerm(query.search);
       builder = builder.or(
         InventoryRemoteQuery.searchColumns
-            .map((column) => '$column.ilike.$pattern')
+            .map((column) => '$column.imatch.$pattern')
             .join(','),
       );
     }

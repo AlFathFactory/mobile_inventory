@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/data/inventory_category_catalog.dart';
+import '../../../../core/utils/search_normalizer.dart';
 import 'reports_remote_data_source.dart';
 
 class SupabaseReportsService implements ReportsRemoteDataSource {
@@ -79,8 +80,7 @@ class SupabaseReportsService implements ReportsRemoteDataSource {
         },
       };
     }
-    // The RPC normalizes Arabic search while the view uses ILIKE. Count-only
-    // reads keep these metrics aligned with the visible timeline search.
+    // Count-only reads keep these metrics aligned with the visible timeline.
     if (query.safeSearch.isNotEmpty) {
       final counts = await Future.wait([
         _countRows(query.withOperationType('issue')),
@@ -120,10 +120,10 @@ class SupabaseReportsService implements ReportsRemoteDataSource {
       builder = builder.eq('project_name', query.project!);
     }
     if (query.safeSearch.isNotEmpty) {
-      final pattern = '*${query.safeSearch}*';
+      final pattern = searchPatternForNormalizedTerm(query.safeSearch);
       builder = builder.or(
         ReportsRemoteQuery.searchColumns
-            .map((column) => '$column.ilike.$pattern')
+            .map((column) => '$column.imatch.$pattern')
             .join(','),
       );
     }

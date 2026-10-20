@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../core/data/repositories/data_result.dart';
+import '../../../core/utils/search_normalizer.dart';
 import '../model/inventory_filter.dart';
 import '../model/inventory_item.dart';
 
@@ -53,10 +54,17 @@ class InventoryState {
       items.where((item) => matches(item, values)).length;
 
   bool matches(InventoryItem item, InventoryFilter values) {
-    final normalizedQuery = query.trim().toLowerCase();
-    return (normalizedQuery.isEmpty ||
-            item.name.toLowerCase().contains(normalizedQuery) ||
-            item.code.toLowerCase().contains(normalizedQuery)) &&
+    final normalizedQuery = normalizeSearchTerm(query);
+    return matchesAnySearchValue([
+          item.name,
+          item.code,
+          item.codeNumber,
+          item.itemKey,
+          item.supplier,
+          item.project,
+          item.category,
+          item.din,
+        ], normalizedQuery) &&
         (quickStatus == null || item.status == quickStatus) &&
         (values.statuses.isEmpty || values.statuses.contains(item.status)) &&
         (values.categories.isEmpty ||
