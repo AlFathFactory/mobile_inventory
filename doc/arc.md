@@ -8,8 +8,9 @@ This document is both the project README and the handoff guide for future develo
 
 - Flutter application with Material 3 UI.
 - Arabic-only UI rendered right-to-left.
-- In-memory preview data only; there is no API, database, authentication, repository, or persistence layer yet.
-- State is managed with Flutter's built-in `ChangeNotifier` and `ListenableBuilder`.
+- Preview data remains available when Supabase is not configured; configured builds use read-only Supabase repositories.
+- Inventory has a Hive CE read-through cache with complete, versioned snapshots.
+- State is managed by feature Cubits and `flutter_bloc`.
 - Navigation is handled by `go_router` with a state-preserving four-tab shell.
 - A simulated 650 ms initial load drives an app-wide skeleton effect.
 - Unit/controller tests and widget/navigation tests are included.
@@ -47,6 +48,57 @@ The intentionally small dependency set is declared in `pubspec.yaml`:
 | `skeletonizer` | App-wide skeleton loading effect |
 | `cupertino_icons` | Standard icon asset package |
 | `flutter_lints` | Analyzer lint baseline used by `analysis_options.yaml` |
+| `hive_ce`, `hive_ce_flutter` | Typed, versioned local snapshots for production inventory reads |
+
+## Offline inventory cache
+
+Production inventory uses Hive CE as a read-through snapshot cache. Preview
+mode remains separate: it uses `PreviewData` only and never reads or writes
+Hive data.
+
+`HiveCacheDatabase` opens two typed boxes:
+
+| Box | Stored value | Purpose |
+| --- | --- | --- |
+| `cache_metadata_v1` | `CacheMetadata` | Dataset version, active generation, successful-sync time, completeness, in-progress state, and last failure kind |
+| `inventory_snapshots_v1` | `InventoryCacheRecord` | Full inventory rows keyed as `generation::table_name::item_id` |
+
+`HiveInventoryLocalDataSource` loads a committed generation once into indexed
+memory. Stable route ID lookup uses `table_name::item_id`, and category lookup
+uses an in-memory category index. Searches, filters, deterministic ordering,
+and cursor pagination then operate locally with the existing shared Arabic
+search normalizer; they do not repeatedly deserialize Hive records.
+
+### Snapshot safety and freshness
+
+`InventorySyncCoordinator` reads every page from
+`inventory_category_items_summary_view` with a bounded server request (100
+items plus the existing look-ahead row). It writes a new Hive generation first
+and switches the metadata only after every page and record succeeds. The last
+complete generation remains visible through network, parsing, or interrupted
+sync failures. On restart an unfinished job is marked interrupted and never
+considered complete.
+
+The coordinator accepts only one inventory sync at a time. A 15-minute fresh
+snapshot avoids another full download when the inventory screen reopens.
+Cached content is returned immediately while stale content refreshes in the
+background. The Cubit's refresh entry point forces a complete refresh.
+
+Schema version mismatches explicitly invalidate the active generation. Old
+records are retained until a replacement commits, then cleaned up as a
+non-critical follow-up. Cache invalidation therefore never deletes the last
+known-good snapshot merely because the server is unavailable.
+
+### Offline coverage
+
+Inventory list is offline-capable after one successful production sync:
+category filters, search including Arabic normalization, stock/project
+filters, sorting, pagination, and item route IDs work from the cached list.
+Item Details, Movement History, Dashboard, Alerts, and Reports still use
+their own live data dependencies. Their data is intentionally not presented
+as offline-capable until they receive separate snapshots for their item fields,
+movement pages, summaries, alerts, RPC aggregates, report filters, counts,
+and timelines.
 
 ## Project structure
 

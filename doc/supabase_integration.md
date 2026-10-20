@@ -30,7 +30,7 @@ and the existing PreviewData application starts normally.
 ```text
 View -> Controller -> Repository contract -> PreviewData adapter (fallback)
                                   \-------> Supabase adapter (configured)
-                                  \-------> Local cache adapter (future)
+                                  \-------> Hive CE inventory snapshot (configured production inventory)
 ```
 
 Repository contracts expose only `fetch` operations. There are no insert,
@@ -40,6 +40,31 @@ update, delete, mutation RPC, or storage-write APIs.
 bounded offset tokens and apply filters before querying. Repositories return
 `DataResult`, while controllers can map that result to `DataLoadState` for
 loading, success, empty, offline/unavailable, and server-error UI behavior.
+
+## Inventory Hive CE synchronization
+
+When a Supabase client is configured, `main.dart` initializes Hive CE and
+injects `HiveInventoryLocalDataSource` into the inventory repository factory.
+Preview mode does not initialize or use this source.
+
+The coordinator requests the inventory summary view in ordered, bounded pages
+until the server returns the final short page. It does not rely on a
+connectivity indicator: request success is the availability check. A 15-minute
+fresh snapshot prevents a new full download on every inventory-screen opening;
+manual Inventory refresh forces one.
+
+Hive metadata records the dataset name (`inventory`), cache schema version,
+active generation, complete-snapshot flag, in-progress state, last successful
+sync timestamp, and last failure type. Inventory records are staged under a
+new generation and metadata is committed only after all pages have been stored.
+An interrupted generation is never made active, and an existing complete
+generation remains readable after a failed refresh. Schema invalidation marks
+the snapshot unavailable until a later successful replacement; it does not
+erase a known-good generation while the backend is unavailable.
+
+This cache contains only `inventory_category_items_summary_view` rows. The
+other Supabase paths below remain live-only until they receive their own
+complete, versioned datasets.
 
 ## Expected row mapping
 

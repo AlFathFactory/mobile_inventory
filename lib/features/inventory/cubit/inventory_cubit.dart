@@ -192,7 +192,11 @@ class InventoryCubit extends Cubit<InventoryState> {
   }
 
   Future<void> retry() => reload();
-  Future<void> refresh() => reload();
+
+  Future<void> refresh() async {
+    await _repository?.refreshCache();
+    await reload();
+  }
 
   Future<void> loadNextPage() async {
     if (!state.isServerBacked || state.isLoading || state.isLoadingMore) return;
