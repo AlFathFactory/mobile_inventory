@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:el_fateh/core/data/local/hive_cache_database.dart';
@@ -48,6 +47,19 @@ void main() {
       expect(snapshot?.itemsForCategories({'Paints'}), hasLength(1));
     },
   );
+
+  test('reopens persisted metadata and inventory records', () async {
+    final item = _item(1);
+    await local.replaceSnapshot([item], DateTime.utc(2026, 10, 20));
+
+    await Hive.close();
+    Hive.init(directory.path);
+    final reopenedDatabase = await HiveCacheDatabase.open();
+    final reopened = HiveInventoryLocalDataSource(reopenedDatabase);
+    await reopened.recoverInterruptedSync();
+
+    expect((await reopened.readSnapshot())?.items.single.routeId, item.routeId);
+  });
 
   test(
     'failed and interrupted sync retain the last complete snapshot',
@@ -153,9 +165,9 @@ void main() {
   });
 
   test(
-    'cold first page returns before the complete snapshot is downloaded',
+    'cold first page caches only viewed rows without downloading the catalog',
     () async {
-      final remote = _DeferredSnapshotRemote(
+      final remote = _PagedRemoteSource(
         List.generate(25, (index) => _row(index)),
       );
       final coordinator = InventorySyncCoordinator(
@@ -171,15 +183,67 @@ void main() {
       final page = (result as DataSuccess<PageResult<InventoryItem>>).value;
       expect(page.items, hasLength(20));
       expect(page.nextCursor, '20');
-      expect(await local.readSnapshot(), isNull);
+      expect((await local.readSnapshot())?.items, hasLength(20));
+      expect(remote.requests.map((request) => request.offset), [0]);
 
-      final completed = repository.cacheEvents.first;
-      remote.releaseSnapshot();
-      expect((await completed).failure, isNull);
+      await repository.fetchItems(
+        const InventoryQuery(page: PageRequest(cursor: '20')),
+      );
       expect((await local.readSnapshot())?.items, hasLength(25));
       expect(remote.requests.map((request) => request.offset), [0, 20]);
     },
   );
+
+  test('offline fallback searches only viewed pages after reopening Hive', () async {
+    final online = CachedInventoryRepository(
+      local: local,
+      syncCoordinator: InventorySyncCoordinator(
+        local: local,
+        remote: _PagedRemoteSource(List.generate(25, _row)),
+      ),
+    );
+    await online.fetchItems(const InventoryQuery());
+
+    await Hive.close();
+    Hive.init(directory.path);
+    final reopened = HiveInventoryLocalDataSource(await HiveCacheDatabase.open());
+    final offline = CachedInventoryRepository(
+      local: reopened,
+      syncCoordinator: InventorySyncCoordinator(
+        local: reopened,
+        remote: _PagedRemoteSource(
+          const [],
+          error: const SocketException('offline'),
+        ),
+      ),
+    );
+    final saved = await offline.fetchItems(
+      const InventoryQuery(search: 'Item 19'),
+    );
+    final unseen = await offline.fetchItems(
+      const InventoryQuery(search: 'Item 24'),
+    );
+    final savedPage = (saved as DataSuccess<PageResult<InventoryItem>>).value;
+    expect(savedPage.fromCache, isTrue);
+    expect(savedPage.items, hasLength(1));
+    expect((unseen as DataSuccess<PageResult<InventoryItem>>).value.items, isEmpty);
+  });
+
+  test('pull refresh replaces saved unfiltered pages', () async {
+    await local.cacheViewedPage([_item(1), _item(2)], DateTime.utc(2026, 10, 20));
+    final repository = CachedInventoryRepository(
+      local: local,
+      syncCoordinator: InventorySyncCoordinator(
+        local: local,
+        remote: _PagedRemoteSource([_row(3)]),
+      ),
+    );
+    await repository.fetchItems(const InventoryQuery(forceRefresh: true));
+    final saved = await local.readSnapshot();
+    expect(saved?.items.map((item) => item.routeId), [
+      InventoryItem.fromInventorySummaryRow(_row(3)).routeId,
+    ]);
+  });
 
   test('forced synchronization replaces a fresh snapshot', () async {
     final now = DateTime.utc(2026, 10, 20);
@@ -283,37 +347,37 @@ void main() {
     );
   });
 
-  test(
-    'cached page remains visible while a background refresh fails',
-    () async {
-      await local.replaceSnapshot([_item(99)], DateTime.utc(2026, 10, 19));
-      final remote = _DeferredFailureRemote();
-      final repository = CachedInventoryRepository(
-        local: local,
-        syncCoordinator: InventorySyncCoordinator(local: local, remote: remote),
-      );
-      final event = repository.cacheEvents.first;
+  test('cached viewed page remains visible when the service fails', () async {
+    await local.replaceSnapshot([_item(99)], DateTime.utc(2026, 10, 19));
+    final remote = _PagedRemoteSource(
+      const [],
+      error: const SocketException('offline'),
+    );
+    final repository = CachedInventoryRepository(
+      local: local,
+      syncCoordinator: InventorySyncCoordinator(local: local, remote: remote),
+    );
+    final page = await repository.fetchItems(const InventoryQuery());
+    expect(
+      (page as DataSuccess<PageResult<InventoryItem>>)
+          .value
+          .items
+          .single
+          .routeId,
+      _item(99).routeId,
+    );
+    expect(
+      (page as DataSuccess<PageResult<InventoryItem>>).value.fromCache,
+      isTrue,
+    );
+    expect(await local.readSnapshot(), isNotNull);
+    expect(
+      (await local.readSnapshot())?.items.single.routeId,
+      _item(99).routeId,
+    );
+  });
 
-      final page = await repository.fetchItems(const InventoryQuery());
-      expect(
-        (page as DataSuccess<PageResult<InventoryItem>>)
-            .value
-            .items
-            .single
-            .routeId,
-        _item(99).routeId,
-      );
-      expect(await local.readSnapshot(), isNotNull);
-      remote.fail();
-      expect((await event).failure, isNotNull);
-      expect(
-        (await local.readSnapshot())?.items.single.routeId,
-        _item(99).routeId,
-      );
-    },
-  );
-
-  test('successful background sync updates the visible first page', () async {
+  test('a successful live request updates the visible first page', () async {
     await local.replaceSnapshot([_item(99)], DateTime.utc(2026, 10, 19));
     final repository = CachedInventoryRepository(
       local: local,
@@ -329,10 +393,7 @@ void main() {
       initiallyLoading: false,
     );
     addTearDown(cubit.close);
-    final completed = repository.cacheEvents.first;
     await cubit.reload();
-    await completed;
-    await Future<void>.delayed(Duration.zero);
     expect(
       cubit.state.items.single.routeId,
       InventoryItem.fromInventorySummaryRow(_row(1)).routeId,
@@ -342,7 +403,10 @@ void main() {
   test(
     'offline local pages apply Arabic search, filters, sorting and cursors',
     () async {
-      final remote = _PagedRemoteSource(const []);
+      final remote = _PagedRemoteSource(
+        const [],
+        error: const SocketException('offline'),
+      );
       final coordinator = InventorySyncCoordinator(
         local: local,
         remote: remote,
@@ -384,7 +448,7 @@ void main() {
       final page = (result as DataSuccess<PageResult<InventoryItem>>).value;
 
       expect(page.items.single.routeId, _item(2).routeId);
-      expect(page.nextCursor, '1');
+      expect(page.nextCursor, 'cached:1');
       final next = await repository.fetchItems(
         InventoryQuery(
           page: PageRequest(limit: 1, cursor: page.nextCursor),
@@ -449,29 +513,6 @@ class _PagedRemoteSource implements InventoryRemoteDataSource {
   Future<List<String>> fetchCategories() async => const [];
 }
 
-class _DeferredSnapshotRemote implements InventoryRemoteDataSource {
-  _DeferredSnapshotRemote(this.rows);
-
-  final List<Map<String, dynamic>> rows;
-  final List<InventoryRemoteQuery> requests = [];
-  final Completer<void> _release = Completer<void>();
-
-  void releaseSnapshot() => _release.complete();
-
-  @override
-  Future<List<Map<String, dynamic>>> fetchItems(
-    InventoryRemoteQuery query,
-  ) async {
-    requests.add(query);
-    if (query.offset > 0) await _release.future;
-    final end = (query.offset + query.fetchLimit).clamp(0, rows.length);
-    return rows.sublist(query.offset, end);
-  }
-
-  @override
-  Future<List<String>> fetchCategories() async => const [];
-}
-
 class _FailingLaterPageRemote implements InventoryRemoteDataSource {
   _FailingLaterPageRemote(this.rows);
 
@@ -501,23 +542,6 @@ class _ToggleRemote implements InventoryRemoteDataSource {
   ) async {
     if (!available) throw const SocketException('offline');
     return query.offset == 0 ? [row] : const [];
-  }
-
-  @override
-  Future<List<String>> fetchCategories() async => const [];
-}
-
-class _DeferredFailureRemote implements InventoryRemoteDataSource {
-  final Completer<void> _release = Completer<void>();
-
-  void fail() => _release.complete();
-
-  @override
-  Future<List<Map<String, dynamic>>> fetchItems(
-    InventoryRemoteQuery query,
-  ) async {
-    await _release.future;
-    throw const SocketException('offline');
   }
 
   @override

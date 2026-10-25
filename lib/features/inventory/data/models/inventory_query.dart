@@ -11,6 +11,7 @@ class InventoryQuery {
     this.statuses = const {},
     this.categories = const {},
     this.projects = const {},
+    this.forceRefresh = false,
   });
 
   final PageRequest page;
@@ -18,4 +19,5 @@ class InventoryQuery {
   final Set<StockStatus> statuses;
   final Set<String> categories;
   final Set<String> projects;
+  final bool forceRefresh;
 }

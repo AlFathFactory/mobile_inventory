@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/theme/app_dimensions.dart';
+import '../../../core/widgets/app_loading_skeleton.dart';
 import '../../../core/widgets/app_components.dart';
 import '../cubit/dashboard_cubit.dart';
 import '../cubit/dashboard_state.dart';
@@ -59,7 +60,7 @@ class DashboardRouteView extends StatelessWidget {
             ),
           ),
           DashboardStatus.initial || DashboardStatus.loading => const Scaffold(
-            body: SafeArea(child: Center(child: CircularProgressIndicator())),
+            body: SafeArea(child: AppLoadingSkeleton()),
           ),
         };
       },

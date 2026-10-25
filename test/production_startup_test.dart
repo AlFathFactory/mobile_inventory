@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:el_fateh/features/inventory/data/local/inventory_local_data_source.dart';
 import 'package:el_fateh/core/data/local/cache_metadata.dart';
+import 'package:el_fateh/core/widgets/app_loading_skeleton.dart';
 import 'package:el_fateh/features/inventory/model/inventory_item.dart';
 import 'package:el_fateh/main.dart';
 import 'package:flutter/material.dart';
@@ -17,6 +18,22 @@ void main() {
     httpClient: MockClient((request) async => http.Response('[]', 200)),
   );
   initializedClient.auth.stopAutoRefresh();
+
+  testWidgets('local startup shows a skeleton while storage opens', (
+    tester,
+  ) async {
+    final storage = Completer<InventoryLocalDataSource>();
+    await tester.pumpWidget(
+      ProductionStartup(
+        localInitializer: () => storage.future,
+        clientInitializer: () async => null,
+      ),
+    );
+    expect(find.byType(AppLoadingSkeleton), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    storage.complete(_EmptyLocal());
+    await tester.pump();
+  });
 
   testWidgets('successful Supabase initialization keeps the shell available', (
     tester,
@@ -78,6 +95,8 @@ void main() {
     );
     await tester.pump();
     expect(find.text('تعذر فتح بيانات المخزون المحفوظة'), findsOneWidget);
+    expect(find.byIcon(Icons.storage_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.refresh_rounded), findsOneWidget);
     await tester.tap(find.text('إعادة المحاولة'));
     await tester.pump();
     expect(find.byKey(const Key('nav-inventory')), findsOneWidget);
@@ -98,6 +117,8 @@ void main() {
     await tester.pump();
     await tester.pump();
     expect(find.text('لا يوجد اتصال بالإنترنت'), findsOneWidget);
+    expect(find.byIcon(Icons.wifi_off_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.refresh_rounded), findsOneWidget);
     expect(find.text('إعادة المحاولة'), findsOneWidget);
   });
 
@@ -164,7 +185,7 @@ void main() {
     await tester.pump();
     expect(find.text('صنف محفوظ'), findsOneWidget);
     expect(
-      find.textContaining('تُعرض بيانات المخزون المحفوظة'),
+      find.textContaining('تُعرض الأصناف التي فُتحت صفحاتها سابقًا فقط'),
       findsOneWidget,
     );
     expect(find.text('لا يوجد اتصال بالإنترنت'), findsNothing);

@@ -47,9 +47,6 @@ class _InventoryFilterSheetState extends State<InventoryFilterSheet> {
     projects: _projects,
   );
 
-  int get _resultCount =>
-      context.read<InventoryCubit>().state.resultCountFor(_draft);
-
   void _toggle<T>(Set<T> values, T value, bool selected) {
     setState(() => selected ? values.add(value) : values.remove(value));
   }
@@ -157,7 +154,7 @@ class _InventoryFilterSheetState extends State<InventoryFilterSheet> {
                           context.read<InventoryCubit>().applyFilters(_draft);
                           Navigator.pop(context);
                         },
-                        child: Text('عرض $_resultCount نتائج'),
+                        child: const Text('عرض النتائج'),
                       ),
                     ),
                   ],

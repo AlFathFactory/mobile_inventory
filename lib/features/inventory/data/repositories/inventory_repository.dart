@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import '../../../../core/data/repositories/data_result.dart';
 import '../../../../core/data/repositories/page.dart';
 import '../../model/inventory_item.dart';
@@ -21,11 +19,4 @@ abstract interface class InventoryCacheRefreshable {
 
 abstract interface class InventoryCacheReadable {
   Future<DateTime?> lastSuccessfulSync();
-  Stream<InventoryCacheEvent> get cacheEvents;
-}
-
-class InventoryCacheEvent {
-  const InventoryCacheEvent({this.failure});
-
-  final DataFailure? failure;
 }

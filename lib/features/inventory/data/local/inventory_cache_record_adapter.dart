@@ -8,8 +8,9 @@ class InventoryCacheRecordAdapter extends TypeAdapter<InventoryCacheRecord> {
 
   @override
   InventoryCacheRecord read(BinaryReader reader) {
+    final fieldCount = reader.readByte();
     final fields = <int, dynamic>{
-      for (var index = 0; index < reader.readByte(); index++)
+      for (var index = 0; index < fieldCount; index++)
         reader.readByte(): reader.read(),
     };
     return InventoryCacheRecord(

@@ -9,7 +9,7 @@ This document is both the project README and the handoff guide for future develo
 - Flutter application with Material 3 UI.
 - Arabic-only UI rendered right-to-left.
 - Preview data is an explicit app/test mode. Production repository factories return unavailable states when the Supabase client is absent.
-- Inventory has a Hive CE read-through cache with complete, versioned snapshots.
+- Inventory saves viewed pages in Hive CE for partial offline browsing.
 - State is managed by feature Cubits and `flutter_bloc`.
 - Navigation is handled by `go_router` with a state-preserving four-tab shell.
 - The Flutter shell renders independently of inventory and other feature requests.
@@ -52,7 +52,7 @@ The intentionally small dependency set is declared in `pubspec.yaml`:
 
 ## Offline inventory cache
 
-Production inventory uses Hive CE as a read-through snapshot cache. Preview
+Production inventory uses Hive CE to save viewed pages. Preview
 mode remains separate: it uses `PreviewData` only and never reads or writes
 Hive data.
 
@@ -60,8 +60,8 @@ Hive data.
 
 | Box | Stored value | Purpose |
 | --- | --- | --- |
-| `cache_metadata_v1` | `CacheMetadata` | Dataset version, active generation, successful-sync time, completeness, in-progress state, and last failure kind |
-| `inventory_snapshots_v1` | `InventoryCacheRecord` | Full inventory rows keyed as `generation::table_name::item_id` |
+| `cache_metadata_v1` | `CacheMetadata` | Dataset version, active generation, last saved-page time, and recovery state |
+| `inventory_snapshots_v1` | `InventoryCacheRecord` | Viewed inventory rows keyed as `generation::table_name::item_id` |
 
 `HiveInventoryLocalDataSource` loads a committed generation once into indexed
 memory. Stable route ID lookup uses `table_name::item_id`, and category lookup
@@ -69,25 +69,14 @@ uses an in-memory category index. Searches, filters, deterministic ordering,
 and cursor pagination then operate locally with the existing shared Arabic
 search normalizer; they do not repeatedly deserialize Hive records.
 
-### Snapshot safety and freshness
+### Page loading and offline coverage
 
-`InventorySyncCoordinator` reads every page from
-`inventory_category_items_summary_view` with a bounded server request (100
-items plus the existing look-ahead row). It writes a new Hive generation first
-and switches the metadata only after every page and record succeeds. The last
-complete generation remains visible through network, parsing, or interrupted
-sync failures. On restart an unfinished job is marked interrupted and never
-considered complete.
-
-The coordinator accepts only one inventory sync at a time. A 15-minute fresh
-snapshot avoids another full download when the inventory screen reopens.
-Cached content is returned immediately while stale content refreshes in the
-background. The Cubit's refresh entry point forces a complete refresh.
-
-On a cold cache, the requested server page (20 items by default) is returned
-before the full snapshot completes. When possible, the unfiltered first page
-seeds the snapshot download. The list requests more pages only from its
-explicit Load More action. A failed later page keeps its cursor for retry.
+The production repository requests bounded server pages as the user scrolls
+and saves each successful page. It does not run the coordinator's full-catalog
+sync in the background. Pull to refresh requests the first page again and an
+unfiltered refresh replaces the saved generation. A failed request falls back
+to saved rows, using a local cursor. Arabic-normalized search and filters then
+operate over viewed items only; the UI labels this partial coverage.
 
 Schema version mismatches explicitly invalidate the active generation. Old
 records are retained until a replacement commits, then cleaned up as a
@@ -96,9 +85,9 @@ known-good snapshot merely because the server is unavailable.
 
 ### Offline coverage
 
-Inventory list is offline-capable after one successful production sync:
-category filters, search including Arabic normalization, stock/project
-filters, sorting, pagination, and item route IDs work from the cached list.
+Inventory list is partially offline-capable after a viewed page has been saved:
+category filters, Arabic-normalized search, stock/project filters, sorting,
+pagination, and item route IDs work over saved rows only.
 Item Details, Movement History, Dashboard, Alerts, and Reports still use
 their own live data dependencies. Their data is intentionally not presented
 as offline-capable until they receive separate snapshots for their item fields,
@@ -112,7 +101,8 @@ el_fateh/
 ├── assets/
 │   └── fonts/                       # IBM Plex Sans Arabic: Light, Medium, Bold
 ├── lib/
-│   ├── main.dart                    # Flutter entry point and recoverable production startup
+│   ├── main.dart                    # Flutter entry point
+│   ├── startup/                    # Recoverable Hive and Supabase startup
 │   ├── app.dart                     # MaterialApp.router, theme, locale, RTL direction
 │   ├── core/
 │   │   ├── data/

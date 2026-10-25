@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('a short first page does not automatically drain pagination', (
+  testWidgets('scrolling loads the next page and pulling down refreshes', (
     tester,
   ) async {
     final repository = _PagedRepository();
@@ -21,18 +21,28 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repository.requests, 1);
-    expect(find.text('عرض المزيد'), findsOneWidget);
+    expect(find.text('عرض المزيد'), findsNothing);
+    expect(find.text('تحديث'), findsNothing);
+    expect(find.byType(RefreshIndicator), findsOneWidget);
     await tester.drag(
       find.byKey(const PageStorageKey('inventory-list')),
       const Offset(0, -400),
     );
     await tester.pumpAndSettle();
-    expect(repository.requests, 1);
-
-    await tester.tap(find.text('عرض المزيد'));
-    await tester.pumpAndSettle();
     expect(repository.requests, 2);
     expect(find.text('عرض المزيد'), findsNothing);
+
+    await tester.drag(
+      find.byKey(const PageStorageKey('inventory-list')),
+      const Offset(0, 400),
+    );
+    await tester.pumpAndSettle();
+    await tester.drag(
+      find.byKey(const PageStorageKey('inventory-list')),
+      const Offset(0, 400),
+    );
+    await tester.pumpAndSettle();
+    expect(repository.requests, 3);
   });
 }
 

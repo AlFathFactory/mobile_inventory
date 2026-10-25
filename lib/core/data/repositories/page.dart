@@ -16,11 +16,12 @@ class PageRequest {
 
 @immutable
 class PageResult<T> {
-  PageResult({required List<T> items, this.nextCursor})
+  PageResult({required List<T> items, this.nextCursor, this.fromCache = false})
     : items = List.unmodifiable(items);
 
   final List<T> items;
   final String? nextCursor;
+  final bool fromCache;
 
   bool get isEmpty => items.isEmpty;
   bool get hasMore => nextCursor != null;

@@ -29,24 +29,11 @@ class InventoryCubit extends Cubit<InventoryState> {
            isServerBacked: serverBacked,
            isLoading: initiallyLoading,
          ),
-       ) {
-    if (repository case final InventoryCacheReadable cache) {
-      _cacheSubscription = cache.cacheEvents.listen((event) {
-        if (isClosed) return;
-        if (event.failure case final failure?) {
-          emit(state.copyWith(refreshFailure: failure));
-        } else {
-          emit(state.copyWith(clearRefreshFailure: true));
-          if (!state.isRefreshing) unawaited(reload());
-        }
-      });
-    }
-  }
+       );
 
   final InventoryRepository? _repository;
   final Duration _searchDebounce;
   Timer? _searchTimer;
-  StreamSubscription<InventoryCacheEvent>? _cacheSubscription;
   int _requestRevision = 0;
 
   List<InventoryItem> get allItems => state.items;
@@ -159,10 +146,10 @@ class InventoryCubit extends Cubit<InventoryState> {
     );
   }
 
-  Future<void> reload() async {
+  Future<void> reload({bool forceRefresh = false}) async {
     if (!state.isServerBacked) return;
     final revision = ++_requestRevision;
-    final query = _remoteQuery();
+    final query = _remoteQuery(forceRefresh: forceRefresh);
     emit(
       state.copyWith(
         isLoading: true,
@@ -205,7 +192,7 @@ class InventoryCubit extends Cubit<InventoryState> {
         emit(
           state.copyWith(
             items: value.items,
-            isCached: lastSync != null,
+            isCached: value.fromCache,
             lastSuccessfulSync: lastSync,
             nextCursor: value.nextCursor,
             clearNextCursor: value.nextCursor == null,
@@ -216,9 +203,14 @@ class InventoryCubit extends Cubit<InventoryState> {
       case DataError(:final failure):
         emit(state.copyWith(failure: failure, isLoading: false));
     }
+    if (result is DataError) return;
+    unawaited(_loadCategories(revision));
+  }
+
+  Future<void> _loadCategories(int revision) async {
     DataResult<List<String>> categories;
     try {
-      categories = await _repository.fetchCategories();
+      categories = await _repository!.fetchCategories();
     } on Object {
       return;
     }
@@ -242,20 +234,23 @@ class InventoryCubit extends Cubit<InventoryState> {
         clearRefreshResult: true,
       ),
     );
-    final repository = _repository;
     try {
-      if (repository case final InventoryCacheRefreshable cacheRepository) {
-        await cacheRepository.refreshCache();
+      if (_repository case final InventoryCacheRefreshable refreshable) {
+        await refreshable.refreshCache();
       }
       if (!isClosed) {
-        await reload();
+        await reload(forceRefresh: true);
         if (!isClosed) {
+          const cacheFailure = DataFailure(
+            kind: DataFailureKind.offline,
+            message: 'The saved inventory was shown because refresh failed.',
+          );
           emit(
             state.copyWith(
               isRefreshing: false,
-              refreshSucceeded: state.failure == null,
-              refreshFailure: state.failure,
-              clearRefreshFailure: state.failure == null,
+              refreshSucceeded: state.failure == null && !state.isCached,
+              refreshFailure: state.isCached ? cacheFailure : state.failure,
+              clearRefreshFailure: state.failure == null && !state.isCached,
             ),
           );
         }
@@ -310,6 +305,7 @@ class InventoryCubit extends Cubit<InventoryState> {
               ...state.items,
               ...value.items.where((item) => knownIds.add(item.routeId)),
             ],
+            isCached: value.fromCache,
             nextCursor: value.nextCursor,
             clearNextCursor: value.nextCursor == null,
             clearFailure: true,
@@ -339,7 +335,7 @@ class InventoryCubit extends Cubit<InventoryState> {
     }
   }
 
-  InventoryQuery? _remoteQuery({String? cursor}) {
+  InventoryQuery? _remoteQuery({String? cursor, bool forceRefresh = false}) {
     final selected = state.filter.statuses;
     if (state.quickStatus != null &&
         selected.isNotEmpty &&
@@ -357,6 +353,7 @@ class InventoryCubit extends Cubit<InventoryState> {
       statuses: statuses,
       categories: state.filter.categories,
       projects: state.filter.projects,
+      forceRefresh: forceRefresh,
     );
   }
 
@@ -371,7 +368,6 @@ class InventoryCubit extends Cubit<InventoryState> {
   @override
   Future<void> close() {
     _searchTimer?.cancel();
-    _cacheSubscription?.cancel();
     _invalidateRequests();
     return super.close();
   }

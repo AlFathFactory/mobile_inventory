@@ -42,6 +42,9 @@ class InventorySyncCoordinator {
   bool _recovered = false;
   _InventoryFirstPage? _firstPage;
 
+  Future<List<String>> fetchCategories() =>
+      _remote.fetchCategories().timeout(const Duration(seconds: 12));
+
   Future<PageResult<InventoryItem>> fetchPage(InventoryQuery query) async {
     final remoteQuery = InventoryRemoteQuery.fromInventoryQuery(query);
     final rows = await _remote

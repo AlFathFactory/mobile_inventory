@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import '../../../../core/data/repositories/data_result.dart';
 import '../../../../core/data/repositories/page.dart';
 import '../../../../core/data/services/supabase_failure_mapper.dart';
@@ -10,12 +8,10 @@ import '../models/inventory_query.dart';
 import '../services/inventory_sync_coordinator.dart';
 import 'inventory_repository.dart';
 
-/// Read-through inventory repository for the production Supabase mode.
+/// Online pages are fetched from Supabase and saved as they are viewed.
+/// Offline queries search only those saved items.
 class CachedInventoryRepository
-    implements
-        InventoryRepository,
-        InventoryCacheRefreshable,
-        InventoryCacheReadable {
+    implements InventoryRepository, InventoryCacheReadable {
   CachedInventoryRepository({
     required InventoryLocalDataSource local,
     required InventorySyncCoordinator syncCoordinator,
@@ -24,12 +20,7 @@ class CachedInventoryRepository
 
   final InventoryLocalDataSource _local;
   final InventorySyncCoordinator _syncCoordinator;
-  final StreamController<InventoryCacheEvent> _cacheEvents =
-      StreamController<InventoryCacheEvent>.broadcast();
-  bool _automaticSyncStarted = false;
-
-  @override
-  Stream<InventoryCacheEvent> get cacheEvents => _cacheEvents.stream;
+  static const _cachedCursorPrefix = 'cached:';
 
   @override
   Future<DateTime?> lastSuccessfulSync() async =>
@@ -38,55 +29,59 @@ class CachedInventoryRepository
   @override
   Future<DataResult<List<String>>> fetchCategories() async {
     final snapshot = await _local.readSnapshot();
-    if (snapshot != null) {
-      _startBackgroundSync();
-      return DataSuccess(_categories(snapshot.items));
+    try {
+      return DataSuccess(await _syncCoordinator.fetchCategories());
+    } on Object catch (error) {
+      if (snapshot != null) return DataSuccess(_categories(snapshot.items));
+      return DataError(SupabaseFailureMapper.from(error));
     }
-    // Categories are optional for the first page. Never hold it behind a full
-    // snapshot download.
-    return const DataSuccess([]);
   }
 
   @override
   Future<DataResult<PageResult<InventoryItem>>> fetchItems(
     InventoryQuery query,
   ) async {
-    final snapshot = await _local.readSnapshot();
-    if (snapshot == null) {
-      try {
-        final firstPage = await _syncCoordinator.fetchPage(query);
-        _startBackgroundSync();
-        return DataSuccess(firstPage);
-      } on Object catch (error) {
-        return DataError(SupabaseFailureMapper.from(error));
-      }
+    if (query.page.cursor?.startsWith(_cachedCursorPrefix) == true) {
+      final snapshot = await _local.readSnapshot();
+      return snapshot == null
+          ? const DataError(
+              DataFailure(
+                kind: DataFailureKind.offline,
+                message: 'No saved inventory page is available.',
+              ),
+            )
+          : DataSuccess(_page(snapshot, query));
     }
-    _startBackgroundSync();
-    return DataSuccess(_page(snapshot, query));
+    try {
+      final page = await _syncCoordinator.fetchPage(query);
+      try {
+        await _local.cacheViewedPage(
+          page.items,
+          DateTime.now(),
+          replace:
+              query.forceRefresh &&
+              query.page.cursor == null &&
+              query.search.isEmpty &&
+              query.categories.isEmpty &&
+              query.projects.isEmpty &&
+              query.statuses.isEmpty,
+        );
+      } on Object {
+        // A storage failure must not hide a successfully fetched live page.
+      }
+      return DataSuccess(page);
+    } on Object catch (error) {
+      final snapshot = await _local.readSnapshot();
+      if (snapshot != null) return DataSuccess(_page(snapshot, query));
+      return DataError(SupabaseFailureMapper.from(error));
+    }
   }
 
-  @override
   Future<void> refreshCache() async {
-    final result = await _syncCoordinator.syncIfStale(force: true);
-    if (!result.isSuccess) throw result.error!;
-  }
-
-  void _startBackgroundSync() {
-    if (_automaticSyncStarted) return;
-    _automaticSyncStarted = true;
-    unawaited(
-      _syncCoordinator.syncIfStale().then((result) {
-        if (result.didSync) {
-          _cacheEvents.add(
-            InventoryCacheEvent(
-              failure: result.isSuccess
-                  ? null
-                  : SupabaseFailureMapper.from(result.error!),
-            ),
-          );
-        }
-      }),
+    final page = await _syncCoordinator.fetchPage(
+      const InventoryQuery(forceRefresh: true),
     );
+    await _local.cacheViewedPage(page.items, DateTime.now(), replace: true);
   }
 
   List<String> _categories(List<InventoryItem> items) =>
@@ -114,7 +109,23 @@ class CachedInventoryRepository
           (query.statuses.isEmpty || query.statuses.contains(item.status)) &&
           (query.projects.isEmpty || query.projects.contains(item.project));
     }).toList()..sort(_compareItems);
-    return paginatePreview(filtered, query.page);
+    final cursor = query.page.cursor;
+    final localPage = paginatePreview(
+      filtered,
+      PageRequest(
+        limit: query.page.limit,
+        cursor: cursor?.startsWith(_cachedCursorPrefix) == true
+            ? cursor!.substring(_cachedCursorPrefix.length)
+            : cursor,
+      ),
+    );
+    return PageResult(
+      items: localPage.items,
+      nextCursor: localPage.nextCursor == null
+          ? null
+          : '$_cachedCursorPrefix${localPage.nextCursor}',
+      fromCache: true,
+    );
   }
 
   int _compareItems(InventoryItem left, InventoryItem right) {

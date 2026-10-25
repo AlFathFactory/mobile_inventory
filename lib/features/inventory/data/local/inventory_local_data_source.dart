@@ -47,13 +47,18 @@ abstract interface class InventoryLocalDataSource {
     List<InventoryItem> items,
     DateTime synchronizedAt,
   );
+  Future<void> cacheViewedPage(
+    List<InventoryItem> items,
+    DateTime savedAt, {
+    bool replace = false,
+  });
   Future<void> markSyncFailed(Object error);
   Future<void> recoverInterruptedSync();
   Future<void> invalidate();
 }
 
-/// Versioned Hive snapshots. A new generation becomes visible only once every
-/// record has been written and its metadata is committed.
+/// Versioned Hive storage for rows the user has viewed. Replacing a generation
+/// commits metadata last; subsequent pages update the active generation.
 class HiveInventoryLocalDataSource implements InventoryLocalDataSource {
   HiveInventoryLocalDataSource(this._database);
 
@@ -151,6 +156,47 @@ class HiveInventoryLocalDataSource implements InventoryLocalDataSource {
         // The next successful replacement will retry this non-critical cleanup.
       }
     }
+  }
+
+  @override
+  Future<void> cacheViewedPage(
+    List<InventoryItem> items,
+    DateTime savedAt, {
+    bool replace = false,
+  }) async {
+    if (replace) {
+      await replaceSnapshot(items, savedAt);
+      return;
+    }
+    if (items.isEmpty) return;
+    final snapshot = await readSnapshot();
+    if (snapshot == null) {
+      await replaceSnapshot(items, savedAt);
+      return;
+    }
+    final generation = snapshot.metadata.generation;
+    final records = <String, InventoryCacheRecord>{
+      for (final item in items)
+        _recordKey(generation, item.routeId): InventoryCacheRecord.fromItem(
+          item,
+          generation,
+        ),
+    };
+    // A stopped write may leave part of this page saved. That is safe because
+    // offline coverage is explicitly partial and every record is a valid row.
+    await _database.inventorySnapshots.putAll(records);
+    final byId = <String, InventoryItem>{
+      for (final item in snapshot.items) item.routeId: item,
+      for (final item in items) item.routeId: item,
+    };
+    final updated = snapshot.metadata.copyWith(
+      lastSuccessfulSync: savedAt.toUtc(),
+    );
+    await _writeMetadata(updated);
+    _inMemorySnapshot = InventoryCacheSnapshot(
+      metadata: updated,
+      items: byId.values.toList(growable: false),
+    );
   }
 
   @override

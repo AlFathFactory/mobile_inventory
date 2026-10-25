@@ -1,35 +1,34 @@
-# Offline-first inventory cache
+# Viewed-page inventory cache
 
 ## Implemented: Inventory
 
-`main()` installs `ProductionStartup` with `runApp()` before opening Hive CE or
-initializing Supabase. Flutter displays a local loading state while Hive opens.
-If opening or recovering the cache fails, an Arabic error screen offers Retry.
+`main()` installs `ProductionStartup` from `lib/startup/production_startup.dart`
+with `runApp()` before opening Hive CE or initializing Supabase. Flutter displays
+a dashboard-shaped Skeletonizer state while Hive opens. If opening or recovering the cache
+fails, an Arabic device-storage error screen offers Retry. This is separate
+from the no-connection Inventory screen shown when no snapshot is available.
 Supabase initialization runs independently with a bounded wait; failures leave
 the application shell usable. Missing production configuration and connection
 failures have separate failure messages. A null client never selects preview
 fixtures in a production repository factory.
 
-The production inventory repository reads the last complete Hive CE snapshot
-first. It filters and sorts the snapshot, then returns only the requested page
-(20 items by default). A stale snapshot is displayed while a bounded, ordered,
-server-paginated Supabase download prepares a replacement. The replacement is
-committed as a new generation only when every requested page has succeeded.
+The production repository requests one bounded page (20 items by default)
+from Supabase and saves its rows in Hive CE. It does not automatically download
+all N inventory rows. Scrolling toward the end requests the next server page.
+Pulling down requests a fresh first page; an unfiltered pull starts a new saved
+generation so deleted items do not linger in the viewed-page cache. Search and
+filter changes start a new server query. The count beside the list identifies
+displayed items, not an exact total matching count.
 
-On a cold cache, the first page is fetched through the existing server-side
-query and shown immediately. The full snapshot starts in the background after
-that page succeeds; the unfiltered first page is reused by the sync when
-possible. A sync failure cannot remove the usable first page or an older
-committed snapshot. Only one automatic sync starts per repository instance.
+If the service fails, the repository searches and filters only saved rows and
+uses a `cached:` cursor for local pagination. The Inventory screen explicitly
+warns that offline results may be incomplete. Successful live requests remain
+usable even if saving a page fails. Viewed pages survive restarts; no full
+catalog download runs during startup or in the background.
 
-The Inventory screen uses an explicit **عرض المزيد** action for subsequent
-pages, with a spinner and retry on a failed page. Search and filter changes
-reset the cursor. The count beside the list identifies displayed items; the
-service currently does not provide an exact total matching count.
-
-The cached inventory supports the current list behavior: Arabic-normalized
-search through `core/utils/search_normalizer.dart`, category/project/status
-filters, deterministic sorting, local offset cursors, and stable
+The saved rows support Arabic-normalized search through
+`core/utils/search_normalizer.dart`, category/project/status filters,
+deterministic sorting, local offset cursors, and stable
 `table_name::item_id` routes. The app remains read-only; there are no offline
 mutations, write queues, or conflict handling.
 
@@ -37,10 +36,14 @@ mutations, write queues, or conflict handling.
 
 | State | Inventory behavior |
 | --- | --- |
-| Saved snapshot, service unavailable | Show saved pages, a cache banner and last successful sync time. Search and filters continue locally. Refresh retries without deleting data. |
+| Viewed pages saved, service unavailable | Show saved items with a partial-coverage warning and last save time. Search and filters run over saved items only. Pull to refresh retries without deleting data. |
 | No snapshot, service unavailable | Show the Arabic in-app connection screen with **إعادة المحاولة**. No preview items are inserted. |
-| Saved snapshot, refresh fails | Keep the visible list and show a nonblocking stale-data message. |
-| Service restored | Retry the first request or force Refresh. A restart or application-data clear is unnecessary. |
+| Saved pages, refresh fails | Keep visible items and show a nonblocking stale-data message. |
+| Service restored | Retry the first request or pull to refresh. A restart or application-data clear is unnecessary. |
+
+Both Hive adapters read their stored field count once before decoding fields.
+The persisted boxes can therefore reopen on later app launches without
+discarding saved pages.
 
 Dashboard, Alerts, Reports, Item Details, and Movement History still require
 their own remote data. Their failures remain within their feature routes. The
@@ -56,6 +59,6 @@ Inventory cache does not fabricate their results.
 | Alerts | Alert summary counts and severity-ordered item segments |
 | Reports | Aggregated RPC output, selected filters, category/project options, counts, and timeline pages |
 
-Each dataset needs its own completeness metadata and versioned snapshot. An
-inventory snapshot alone must not be used to fabricate an offline dashboard,
+Each dataset needs its own cache and coverage metadata. Saved inventory pages
+alone must not be used to fabricate an offline dashboard,
 detail, movement history, alert, or report result.

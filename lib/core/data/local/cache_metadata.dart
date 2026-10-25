@@ -16,6 +16,8 @@ class CacheMetadata {
   final String dataset;
   final int schemaVersion;
   final int generation;
+
+  /// The active generation is readable. Inventory coverage may still be partial.
   final bool isComplete;
   final bool syncInProgress;
   final DateTime? lastSuccessfulSync;
