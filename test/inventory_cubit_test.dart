@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:el_fateh/core/data/preview_data.dart';
 import 'package:el_fateh/core/data/repositories/data_result.dart';
@@ -174,11 +173,16 @@ void main() {
     });
 
     test('failed manual refresh preserves the visible list', () async {
-      final refresh = Completer<void>();
-      final repository = _FakeInventoryRepository(
-        (_) => DataSuccess(PageResult(items: [PreviewData.catalogItems[0]])),
-        refresh: () => refresh.future,
-      );
+      var requests = 0;
+      final repository = _FakeInventoryRepository((_) {
+        requests++;
+        if (requests == 1) {
+          return DataSuccess(PageResult(items: [PreviewData.catalogItems[0]]));
+        }
+        return const DataError(
+          DataFailure(kind: DataFailureKind.offline, message: 'offline'),
+        );
+      });
       final cubit = InventoryCubit(
         serverBacked: true,
         initiallyLoading: false,
@@ -187,11 +191,8 @@ void main() {
       addTearDown(cubit.close);
       await cubit.reload();
 
-      unawaited(cubit.refresh());
-      expect(cubit.state.isRefreshing, isTrue);
+      await cubit.refresh();
       expect(cubit.state.items, hasLength(1));
-      refresh.completeError(const SocketException('offline'));
-      await Future<void>.delayed(Duration.zero);
 
       expect(cubit.state.isRefreshing, isFalse);
       expect(cubit.state.refreshFailure?.kind, DataFailureKind.offline);
@@ -200,17 +201,11 @@ void main() {
   });
 }
 
-class _FakeInventoryRepository
-    implements InventoryRepository, InventoryCacheRefreshable {
-  _FakeInventoryRepository(this._fetch, {Future<void> Function()? refresh})
-    : _refresh = refresh;
+class _FakeInventoryRepository implements InventoryRepository {
+  _FakeInventoryRepository(this._fetch);
 
   final FutureOr<DataResult<PageResult<InventoryItem>>> Function(InventoryQuery)
   _fetch;
-  final Future<void> Function()? _refresh;
-
-  @override
-  Future<void> refreshCache() => _refresh?.call() ?? Future.value();
 
   @override
   Future<DataResult<PageResult<InventoryItem>>> fetchItems(

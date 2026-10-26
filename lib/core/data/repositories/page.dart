@@ -9,26 +9,24 @@ class PageRequest {
 
   final int limit;
 
-  /// Opaque to callers. A remote repository can use a keyset cursor while a
-  /// future cache can use its own token format.
+  /// Opaque to callers. Live and preview repositories choose their own token.
   final String? cursor;
 }
 
 @immutable
 class PageResult<T> {
-  PageResult({required List<T> items, this.nextCursor, this.fromCache = false})
+  PageResult({required List<T> items, this.nextCursor})
     : items = List.unmodifiable(items);
 
   final List<T> items;
   final String? nextCursor;
-  final bool fromCache;
 
   bool get isEmpty => items.isEmpty;
   bool get hasMore => nextCursor != null;
 }
 
-/// Offset cursors are sufficient for deterministic PreviewData and local-cache
-/// adapters. Supabase implementations can replace this with keyset pagination
+/// Offset cursors are sufficient for deterministic PreviewData.
+/// Supabase implementations can replace this with keyset pagination
 /// without changing repository consumers.
 PageResult<T> paginatePreview<T>(List<T> values, PageRequest request) {
   final parsedOffset = int.tryParse(request.cursor ?? '') ?? 0;

@@ -13,8 +13,6 @@ class InventoryState {
     this.isLoading = true,
     this.isLoadingMore = false,
     this.isRefreshing = false,
-    this.isCached = false,
-    this.lastSuccessfulSync,
     this.refreshFailure,
     this.refreshSucceeded,
     this.loadMoreFailure,
@@ -32,8 +30,6 @@ class InventoryState {
   final bool isLoading;
   final bool isLoadingMore;
   final bool isRefreshing;
-  final bool isCached;
-  final DateTime? lastSuccessfulSync;
   final DataFailure? refreshFailure;
   final bool? refreshSucceeded;
   final DataFailure? loadMoreFailure;
@@ -89,8 +85,6 @@ class InventoryState {
     bool? isLoading,
     bool? isLoadingMore,
     bool? isRefreshing,
-    bool? isCached,
-    DateTime? lastSuccessfulSync,
     DataFailure? refreshFailure,
     bool clearRefreshFailure = false,
     bool? refreshSucceeded,
@@ -112,8 +106,6 @@ class InventoryState {
     isLoading: isLoading ?? this.isLoading,
     isLoadingMore: isLoadingMore ?? this.isLoadingMore,
     isRefreshing: isRefreshing ?? this.isRefreshing,
-    isCached: isCached ?? this.isCached,
-    lastSuccessfulSync: lastSuccessfulSync ?? this.lastSuccessfulSync,
     refreshFailure: clearRefreshFailure
         ? null
         : (refreshFailure ?? this.refreshFailure),

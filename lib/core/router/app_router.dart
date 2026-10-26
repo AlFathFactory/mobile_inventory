@@ -33,6 +33,7 @@ import 'not_found_view.dart';
 class AppRouter {
   AppRouter({
     required Duration previewLoadDelay,
+    this.initialLocation = AppRoutePaths.dashboard,
     DashboardRepository? dashboardRepository,
     AlertsRepository? alertsRepository,
     InventoryRepository? inventoryRepository,
@@ -94,6 +95,7 @@ class AppRouter {
   }
 
   final rootNavigatorKey = GlobalKey<NavigatorState>();
+  final String initialLocation;
   final DashboardCubit dashboardCubit;
   final InventoryCubit inventoryCubit;
   final AlertsCubit alertsCubit;
@@ -105,7 +107,7 @@ class AppRouter {
 
   late final GoRouter router = GoRouter(
     navigatorKey: rootNavigatorKey,
-    initialLocation: AppRoutePaths.dashboard,
+    initialLocation: initialLocation,
     errorBuilder: (context, state) => const NotFoundView(),
     routes: [
       StatefulShellRoute.indexedStack(

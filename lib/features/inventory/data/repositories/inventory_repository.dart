@@ -11,12 +11,3 @@ abstract interface class InventoryRepository {
   Future<DataResult<List<String>>> fetchCategories() async =>
       const DataSuccess([]);
 }
-
-/// Optional capability implemented only by repositories with a local cache.
-abstract interface class InventoryCacheRefreshable {
-  Future<void> refreshCache();
-}
-
-abstract interface class InventoryCacheReadable {
-  Future<DateTime?> lastSuccessfulSync();
-}

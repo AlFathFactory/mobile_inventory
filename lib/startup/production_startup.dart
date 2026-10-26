@@ -1,34 +1,31 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../app.dart';
 import '../core/config/supabase_config.dart';
-import '../core/data/local/hive_cache_database.dart';
+import '../core/data/repositories/data_result.dart';
+import '../core/data/repositories/page.dart';
 import '../core/data/services/connecting_inventory_source.dart';
 import '../core/data/services/supabase_bootstrap.dart';
-import '../core/theme/app_theme.dart';
-import '../core/widgets/app_loading_skeleton.dart';
-import '../core/widgets/recovery_panel.dart';
-import '../features/inventory/data/local/inventory_local_data_source.dart';
+import '../core/data/services/supabase_failure_mapper.dart';
+import '../core/router/app_routes.dart';
 import '../features/alerts/data/repositories/alerts_repository_factory.dart';
 import '../features/dashboard/data/repositories/dashboard_repository_factory.dart';
+import '../features/inventory/data/models/inventory_query.dart';
 import '../features/inventory/data/repositories/inventory_repository_factory.dart';
 import '../features/inventory/data/repositories/item_details_repository_factory.dart';
 import '../features/inventory/data/repositories/movement_history_repository_factory.dart';
+import '../features/inventory/data/services/inventory_remote_data_source.dart';
+import '../features/inventory/data/services/supabase_inventory_service.dart';
 import '../features/reports/data/repositories/reports_repository_factory.dart';
+import 'remove_legacy_inventory_cache.dart';
 
-/// Installs a Flutter tree before local storage or network setup starts.
+/// Starts live repositories without waiting for device storage.
 class ProductionStartup extends StatefulWidget {
-  const ProductionStartup({
-    super.key,
-    this.localInitializer,
-    this.clientInitializer,
-  });
+  const ProductionStartup({super.key, this.clientInitializer});
 
-  final Future<InventoryLocalDataSource> Function()? localInitializer;
   final Future<SupabaseClient?> Function()? clientInitializer;
 
   @override
@@ -36,41 +33,33 @@ class ProductionStartup extends StatefulWidget {
 }
 
 class _ProductionStartupState extends State<ProductionStartup> {
-  InventoryLocalDataSource? _local;
   SupabaseClient? _client;
-  Object? _localError;
-  bool _openingLocal = false;
   Future<SupabaseClient?>? _connecting;
   Object? _connectionError;
+  bool _connectionLost = false;
+  bool _retrying = false;
+  int _connectionGeneration = 0;
+  String _lastLocation = AppRoutePaths.dashboard;
 
   @override
   void initState() {
     super.initState();
-    unawaited(_openLocal());
+    SupabaseFailureMapper.onConnectionFailure = _showConnectionOverlay;
+    unawaited(removeLegacyInventoryCache());
+    unawaited(_connect());
   }
 
-  Future<void> _openLocal() async {
-    if (_openingLocal) return;
-    setState(() {
-      _openingLocal = true;
-      _localError = null;
-    });
-    try {
-      final local = await (widget.localInitializer?.call() ?? _openHive());
-      await local.recoverInterruptedSync();
-      if (!mounted) return;
-      setState(() => _local = local);
-      unawaited(_connect());
-    } on Object catch (error) {
-      debugPrint('Hive cache initialization failed: $error');
-      if (mounted) setState(() => _localError = error);
-    } finally {
-      if (mounted) setState(() => _openingLocal = false);
+  @override
+  void dispose() {
+    if (SupabaseFailureMapper.onConnectionFailure == _showConnectionOverlay) {
+      SupabaseFailureMapper.onConnectionFailure = null;
     }
+    super.dispose();
   }
 
-  Future<InventoryLocalDataSource> _openHive() async =>
-      HiveInventoryLocalDataSource(await HiveCacheDatabase.initializeFlutter());
+  void _showConnectionOverlay() {
+    if (mounted && !_connectionLost) setState(() => _connectionLost = true);
+  }
 
   Future<SupabaseClient?> _connect() {
     if (_client != null) return Future.value(_client);
@@ -96,60 +85,65 @@ class _ProductionStartupState extends State<ProductionStartup> {
           await (widget.clientInitializer?.call() ??
                   SupabaseBootstrap.initialize())
               .timeout(const Duration(seconds: 10));
+      if (client == null) throw const SupabaseConnectionException();
       _connectionError = null;
-      if (mounted && client != null) setState(() => _client = client);
+      if (mounted) setState(() => _client = client);
       return client;
     } on Object catch (error) {
       _connectionError = error;
+      SupabaseFailureMapper.from(error);
       debugPrint('Supabase initialization failed: $error');
       return null;
     }
   }
 
+  Future<void> _retryConnection() async {
+    if (_retrying) return;
+    setState(() => _retrying = true);
+    try {
+      final client = await _connect();
+      if (client == null) return;
+      // A client can initialize without a working network. Check a real read.
+      await SupabaseInventoryService(client)
+          .fetchItems(
+            InventoryRemoteQuery.fromInventoryQuery(
+              const InventoryQuery(page: PageRequest(limit: 1)),
+            ),
+          )
+          .timeout(const Duration(seconds: 10));
+      if (!mounted) return;
+      setState(() {
+        _connectionLost = false;
+        _connectionGeneration++;
+      });
+    } on Object catch (error) {
+      final failure = SupabaseFailureMapper.from(error);
+      if (mounted && failure.kind != DataFailureKind.offline) {
+        setState(() {
+          _connectionLost = false;
+          _connectionGeneration++;
+        });
+      }
+      debugPrint('Connection retry failed: $error');
+    } finally {
+      if (mounted) setState(() => _retrying = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final local = _local;
-    if (local == null) {
-      return MaterialApp(
-        theme: AppTheme.light,
-        locale: const Locale('ar'),
-        supportedLocales: const [Locale('ar')],
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        home: Directionality(
-          textDirection: TextDirection.rtl,
-          child: Scaffold(
-            body: SafeArea(
-              child: _localError == null
-                  ? const AppLoadingSkeleton()
-                  : Center(
-                      child: SingleChildScrollView(
-                        child: RecoveryPanel(
-                          icon: Icons.storage_rounded,
-                          title: 'تعذر فتح بيانات المخزون المحفوظة',
-                          message:
-                              'تعذر قراءة البيانات المحفوظة على هذا الجهاز. حاول مرة أخرى لفتح التطبيق.',
-                          onRetry: _openLocal,
-                          isRetrying: _openingLocal,
-                        ),
-                      ),
-                    ),
-            ),
-          ),
-        ),
-      );
-    }
     final client = _client;
     return MyApp(
-      key: ValueKey(client),
+      key: ValueKey((client, _connectionGeneration)),
+      connectionLost: _connectionLost,
+      isRetryingConnection: _retrying,
+      onRetryConnection: _retryConnection,
+      initialLocation: _lastLocation,
+      onLocationChanged: (location) => _lastLocation = location,
       dashboardRepository: DashboardRepositoryFactory.create(client),
       alertsRepository: AlertsRepositoryFactory.create(client),
       inventoryRepository: InventoryRepositoryFactory.create(
         client,
-        localDataSource: local,
         remoteDataSource: ConnectingInventorySource(
           _connect,
           () => _connectionError,

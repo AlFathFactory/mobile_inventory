@@ -32,7 +32,6 @@ PreviewData into production repositories.
 ```text
 View -> Controller -> Repository contract -> PreviewData adapter (fallback)
                                   \-------> Supabase adapter (configured)
-                                  \-------> Hive CE viewed-page cache (configured production inventory)
 ```
 
 Repository contracts expose only `fetch` operations. There are no insert,
@@ -43,24 +42,14 @@ bounded offset tokens and apply filters before querying. Repositories return
 `DataResult`, while controllers can map that result to `DataLoadState` for
 loading, success, empty, offline/unavailable, and server-error UI behavior.
 
-## Inventory Hive CE viewed-page cache
+## Connection recovery
 
-`lib/startup/production_startup.dart` initializes Hive CE and injects
-`HiveInventoryLocalDataSource` into the production inventory repository factory
-before the Supabase client is ready. Preview mode does not initialize or use
-this source.
-
-The repository requests one ordered, bounded inventory page at a time and
-caches rows as the user views them. Scrolling fetches subsequent pages; pulling
-down refreshes the first page. There is no automatic full-catalog download.
-When a request fails, saved rows remain available for partial offline browsing.
-Hive metadata records the active generation and last saved-page time. An
-unfiltered pull refresh replaces the saved generation, while ordinary pages
-add or update rows by stable item identity. Offline search and filters cover
-only saved rows, which the screen labels explicitly.
-
-This cache contains only `inventory_category_items_summary_view` rows. The
-other Supabase paths below remain live-only until they receive their own caches.
+The production inventory repository requests ordered, bounded pages from
+Supabase. Scrolling fetches subsequent pages; pulling down fetches the first
+page again. No inventory rows are persisted for offline use. Connection
+failures across live repositories show the app-wide recovery overlay. Retry
+checks a real inventory read and reloads the app after success. See
+`doc/offline_cache.md` for the upgrade cleanup of retired Hive files.
 
 ## Expected row mapping
 

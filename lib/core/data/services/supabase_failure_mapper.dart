@@ -8,6 +8,9 @@ import '../repositories/data_result.dart';
 import 'supabase_bootstrap.dart';
 
 abstract final class SupabaseFailureMapper {
+  /// Set by the production app to cover every live repository with one overlay.
+  static void Function()? onConnectionFailure;
+
   static DataFailure from(Object error) {
     if (error is SupabaseConfigurationException) {
       return const DataFailure(
@@ -16,6 +19,7 @@ abstract final class SupabaseFailureMapper {
       );
     }
     if (error is SupabaseConnectionException) {
+      onConnectionFailure?.call();
       return const DataFailure(
         kind: DataFailureKind.offline,
         message: 'تعذر الاتصال بخدمة البيانات.',
@@ -24,6 +28,7 @@ abstract final class SupabaseFailureMapper {
     if (error is TimeoutException ||
         error is ClientException ||
         error is SocketException) {
+      onConnectionFailure?.call();
       return const DataFailure(
         kind: DataFailureKind.offline,
         message: 'Unable to reach the data service.',

@@ -146,10 +146,10 @@ class InventoryCubit extends Cubit<InventoryState> {
     );
   }
 
-  Future<void> reload({bool forceRefresh = false}) async {
+  Future<void> reload() async {
     if (!state.isServerBacked) return;
     final revision = ++_requestRevision;
-    final query = _remoteQuery(forceRefresh: forceRefresh);
+    final query = _remoteQuery();
     emit(
       state.copyWith(
         isLoading: true,
@@ -184,16 +184,9 @@ class InventoryCubit extends Cubit<InventoryState> {
     if (isClosed || revision != _requestRevision) return;
     switch (result) {
       case DataSuccess(:final value):
-        DateTime? lastSync;
-        if (_repository case final InventoryCacheReadable cache) {
-          lastSync = await cache.lastSuccessfulSync();
-          if (isClosed || revision != _requestRevision) return;
-        }
         emit(
           state.copyWith(
             items: value.items,
-            isCached: value.fromCache,
-            lastSuccessfulSync: lastSync,
             nextCursor: value.nextCursor,
             clearNextCursor: value.nextCursor == null,
             clearFailure: true,
@@ -235,22 +228,15 @@ class InventoryCubit extends Cubit<InventoryState> {
       ),
     );
     try {
-      if (_repository case final InventoryCacheRefreshable refreshable) {
-        await refreshable.refreshCache();
-      }
       if (!isClosed) {
-        await reload(forceRefresh: true);
+        await reload();
         if (!isClosed) {
-          const cacheFailure = DataFailure(
-            kind: DataFailureKind.offline,
-            message: 'The saved inventory was shown because refresh failed.',
-          );
           emit(
             state.copyWith(
               isRefreshing: false,
-              refreshSucceeded: state.failure == null && !state.isCached,
-              refreshFailure: state.isCached ? cacheFailure : state.failure,
-              clearRefreshFailure: state.failure == null && !state.isCached,
+              refreshSucceeded: state.failure == null,
+              refreshFailure: state.failure,
+              clearRefreshFailure: state.failure == null,
             ),
           );
         }
@@ -305,7 +291,6 @@ class InventoryCubit extends Cubit<InventoryState> {
               ...state.items,
               ...value.items.where((item) => knownIds.add(item.routeId)),
             ],
-            isCached: value.fromCache,
             nextCursor: value.nextCursor,
             clearNextCursor: value.nextCursor == null,
             clearFailure: true,
@@ -335,7 +320,7 @@ class InventoryCubit extends Cubit<InventoryState> {
     }
   }
 
-  InventoryQuery? _remoteQuery({String? cursor, bool forceRefresh = false}) {
+  InventoryQuery? _remoteQuery({String? cursor}) {
     final selected = state.filter.statuses;
     if (state.quickStatus != null &&
         selected.isNotEmpty &&
@@ -353,7 +338,6 @@ class InventoryCubit extends Cubit<InventoryState> {
       statuses: statuses,
       categories: state.filter.categories,
       projects: state.filter.projects,
-      forceRefresh: forceRefresh,
     );
   }
 

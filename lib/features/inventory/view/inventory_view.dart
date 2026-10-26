@@ -115,10 +115,7 @@ class _InventoryViewState extends State<InventoryView> {
             final isLoading = state.isLoading;
             final items = state.visibleItems;
             final failure = state.failure;
-            if (failure != null &&
-                items.isEmpty &&
-                !isLoading &&
-                !state.isCached) {
+            if (failure != null && items.isEmpty && !isLoading) {
               return Column(
                 children: [
                   const InventoryHeader(totalCount: 0),
@@ -138,7 +135,7 @@ class _InventoryViewState extends State<InventoryView> {
                           },
                           message: switch (failure.kind) {
                             DataFailureKind.offline =>
-                              'لا توجد بيانات مخزون محفوظة على هذا الجهاز حتى الآن. تحقق من اتصالك بالإنترنت وحاول مرة أخرى.',
+                              'تحقق من اتصالك بالإنترنت وحاول مرة أخرى.',
                             DataFailureKind.unavailable =>
                               'خدمة البيانات غير متاحة حاليًا. حاول مرة أخرى بعد قليل.',
                             _ =>
@@ -165,19 +162,12 @@ class _InventoryViewState extends State<InventoryView> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           InventoryHeader(totalCount: state.items.length),
-                          if (state.isCached) ...[
-                            const SizedBox(height: AppDimensions.space8),
-                            Text(
-                              'دون اتصال: تُعرض الأصناف التي فُتحت صفحاتها سابقًا فقط. قد لا تشمل نتائج البحث كل المخزون'
-                              '${state.lastSuccessfulSync == null ? '' : ' · آخر حفظ: ${state.lastSuccessfulSync!.toLocal()}'}',
-                            ),
-                          ],
                           if (state.refreshFailure != null ||
                               (state.failure != null && items.isNotEmpty))
                             const Padding(
                               padding: EdgeInsets.only(top: 8),
                               child: Text(
-                                'تعذر تحديث البيانات. قد تكون النسخة المعروضة قديمة.',
+                                'تعذر تحديث البيانات. حاول مرة أخرى.',
                               ),
                             ),
                           if (state.refreshSucceeded == true)

@@ -1,5 +1,6 @@
 {
   "git.ignoredRepositories": [
     "F:\\FLUTTER\\flutter"
-  ]
+  ],
+  "java.configuration.updateBuildConfiguration": "interactive"
 }

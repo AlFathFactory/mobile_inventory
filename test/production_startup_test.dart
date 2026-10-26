@@ -1,10 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 
-import 'package:el_fateh/features/inventory/data/local/inventory_local_data_source.dart';
-import 'package:el_fateh/core/data/local/cache_metadata.dart';
-import 'package:el_fateh/core/widgets/app_loading_skeleton.dart';
-import 'package:el_fateh/features/inventory/model/inventory_item.dart';
+import 'package:el_fateh/core/data/services/supabase_failure_mapper.dart';
+import 'package:el_fateh/core/widgets/app_bottom_navigation.dart';
 import 'package:el_fateh/main.dart';
+import 'package:el_fateh/startup/remove_legacy_inventory_cache.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -15,198 +15,106 @@ void main() {
   final initializedClient = SupabaseClient(
     'https://example.supabase.co',
     'sb_publishable_example',
-    httpClient: MockClient((request) async => http.Response('[]', 200)),
+    httpClient: MockClient(
+      (request) async => http.Response(
+        '[]',
+        200,
+        request: request,
+        headers: {'content-type': 'application/json'},
+      ),
+    ),
   );
   initializedClient.auth.stopAutoRefresh();
 
-  testWidgets('local startup shows a skeleton while storage opens', (
-    tester,
-  ) async {
-    final storage = Completer<InventoryLocalDataSource>();
-    await tester.pumpWidget(
-      ProductionStartup(
-        localInitializer: () => storage.future,
-        clientInitializer: () async => null,
-      ),
-    );
-    expect(find.byType(AppLoadingSkeleton), findsOneWidget);
-    expect(find.byType(CircularProgressIndicator), findsNothing);
-    storage.complete(_EmptyLocal());
-    await tester.pump();
-  });
-
-  testWidgets('successful Supabase initialization keeps the shell available', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      ProductionStartup(
-        localInitializer: () async => _EmptyLocal(),
-        clientInitializer: () async => initializedClient,
-      ),
-    );
-    await tester.pump();
-    expect(find.byKey(const Key('nav-inventory')), findsOneWidget);
-  });
-
-  testWidgets('the shell renders while Supabase initialization is pending', (
+  testWidgets('the app shell renders while Supabase initializes', (
     tester,
   ) async {
     final connection = Completer<SupabaseClient?>();
     await tester.pumpWidget(
-      ProductionStartup(
-        localInitializer: () async => _EmptyLocal(),
-        clientInitializer: () => connection.future,
-      ),
-    );
-    await tester.pump();
-
-    expect(find.byKey(const Key('nav-inventory')), findsOneWidget);
-    expect(connection.isCompleted, isFalse);
-    connection.complete(null);
-    await tester.pump();
-  });
-
-  testWidgets('a Supabase initialization error leaves a usable shell', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      ProductionStartup(
-        localInitializer: () async => _EmptyLocal(),
-        clientInitializer: () async => throw const SocketExceptionForTest(),
-      ),
+      ProductionStartup(clientInitializer: () => connection.future),
     );
     await tester.pump();
     expect(find.byKey(const Key('nav-inventory')), findsOneWidget);
+    expect(find.byKey(const Key('connection-overlay')), findsNothing);
+    connection.complete(initializedClient);
+    await tester.pump();
   });
 
-  testWidgets('a local initialization error has an in-app retry', (
+  testWidgets('a connection failure blocks the whole app with retry', (
     tester,
   ) async {
     var attempts = 0;
     await tester.pumpWidget(
       ProductionStartup(
-        localInitializer: () async {
-          attempts++;
-          if (attempts == 1) throw StateError('cache open failed');
-          return _EmptyLocal();
-        },
-        clientInitializer: () async => null,
-      ),
-    );
-    await tester.pump();
-    expect(find.text('تعذر فتح بيانات المخزون المحفوظة'), findsOneWidget);
-    expect(find.byIcon(Icons.storage_rounded), findsOneWidget);
-    expect(find.byIcon(Icons.refresh_rounded), findsOneWidget);
-    await tester.tap(find.text('إعادة المحاولة'));
-    await tester.pump();
-    expect(find.byKey(const Key('nav-inventory')), findsOneWidget);
-    expect(attempts, 2);
-  });
-
-  testWidgets('no cache and no service displays offline recovery', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      ProductionStartup(
-        localInitializer: () async => _EmptyLocal(),
-        clientInitializer: () async => null,
-      ),
-    );
-    await tester.pump();
-    await tester.tap(find.byKey(const Key('nav-inventory')));
-    await tester.pump();
-    await tester.pump();
-    expect(find.text('لا يوجد اتصال بالإنترنت'), findsOneWidget);
-    expect(find.byIcon(Icons.wifi_off_rounded), findsOneWidget);
-    expect(find.byIcon(Icons.refresh_rounded), findsOneWidget);
-    expect(find.text('إعادة المحاولة'), findsOneWidget);
-  });
-
-  testWidgets('retry reconnects without clearing app data or restarting', (
-    tester,
-  ) async {
-    var attempts = 0;
-    await tester.pumpWidget(
-      ProductionStartup(
-        localInitializer: () async => _EmptyLocal(),
         clientInitializer: () async {
           attempts++;
-          return attempts <= 2 ? null : initializedClient;
+          if (attempts == 1) throw const SocketException('offline');
+          return initializedClient;
         },
       ),
     );
     await tester.pump();
-    await tester.tap(find.byKey(const Key('nav-inventory')));
-    await tester.pump();
-    await tester.pump();
-    expect(find.text('لا يوجد اتصال بالإنترنت'), findsOneWidget);
+    expect(find.byKey(const Key('connection-overlay')), findsOneWidget);
+    expect(find.byIcon(Icons.wifi_off_rounded), findsOneWidget);
+    expect(find.byKey(const Key('retry-connection')), findsOneWidget);
 
-    await tester.tap(find.text('إعادة المحاولة'));
+    await tester.tap(find.byKey(const Key('retry-connection')));
     await tester.pump();
-    await tester.pump();
-    expect(attempts, greaterThanOrEqualTo(3));
-    expect(find.text('لا يوجد اتصال بالإنترنت'), findsNothing);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(attempts, 2);
+    expect(find.byKey(const Key('connection-overlay')), findsNothing);
     expect(find.byKey(const Key('nav-inventory')), findsOneWidget);
   });
 
-  testWidgets('saved inventory remains browsable while offline', (
+  testWidgets('a later feature connection failure shows the same overlay', (
     tester,
   ) async {
-    final saved = InventoryCacheSnapshot(
-      metadata: CacheMetadata(
-        dataset: inventoryDatasetName,
-        schemaVersion: inventoryCacheSchemaVersion,
-        generation: 1,
-        isComplete: true,
-        syncInProgress: false,
-        lastSuccessfulSync: DateTime.now(),
-      ),
-      items: [
-        const InventoryItem(
-          code: 'SAVED-1',
-          name: 'صنف محفوظ',
-          category: 'General',
-          project: 'Project',
-          quantity: 3,
-          minimum: 1,
-          tableName: 'inventory_items',
-          itemId: '00000000-0000-0000-0000-000000000001',
-        ),
-      ],
-    );
     await tester.pumpWidget(
-      ProductionStartup(
-        localInitializer: () async => _EmptyLocal(saved),
-        clientInitializer: () async => null,
-      ),
+      ProductionStartup(clientInitializer: () async => initializedClient),
     );
     await tester.pump();
     await tester.tap(find.byKey(const Key('nav-inventory')));
-    await tester.pump();
-    expect(find.text('صنف محفوظ'), findsOneWidget);
+    await tester.pumpAndSettle();
     expect(
-      find.textContaining('تُعرض الأصناف التي فُتحت صفحاتها سابقًا فقط'),
-      findsOneWidget,
+      tester
+          .widget<AppBottomNavigation>(find.byType(AppBottomNavigation))
+          .selectedIndex,
+      1,
     );
-    expect(find.text('لا يوجد اتصال بالإنترنت'), findsNothing);
+    SupabaseFailureMapper.from(const SocketException('offline'));
+    await tester.pump();
+    expect(find.byKey(const Key('connection-overlay')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('retry-connection')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('connection-overlay')), findsNothing);
+    expect(
+      tester
+          .widget<AppBottomNavigation>(find.byType(AppBottomNavigation))
+          .selectedIndex,
+      1,
+    );
   });
-}
 
-class SocketExceptionForTest implements Exception {
-  const SocketExceptionForTest();
-}
-
-class _EmptyLocal implements InventoryLocalDataSource {
-  _EmptyLocal([this.snapshot]);
-
-  final InventoryCacheSnapshot? snapshot;
-
-  @override
-  Future<InventoryCacheSnapshot?> readSnapshot() async => snapshot;
-
-  @override
-  Future<void> recoverInterruptedSync() async {}
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  test('upgrade cleanup removes only the retired inventory boxes', () async {
+    final root = await Directory.systemTemp.createTemp('inventory-cleanup-');
+    addTearDown(() => root.delete(recursive: true));
+    for (final name in [
+      'cache_metadata_v1.hive',
+      'cache_metadata_v1.lock',
+      'inventory_snapshots_v1.hive',
+      'inventory_snapshots_v1.hivec',
+      'other_data.hive',
+    ]) {
+      await File(
+        '${root.path}${Platform.pathSeparator}$name',
+      ).writeAsString('x');
+    }
+    await removeLegacyInventoryCache(directoryPath: root.path);
+    expect(
+      root.listSync().whereType<File>().map(
+        (file) => file.uri.pathSegments.last,
+      ),
+      ['other_data.hive'],
+    );
+  });
 }

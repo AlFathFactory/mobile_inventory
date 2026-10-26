@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/theme/app_theme.dart';
+import 'core/widgets/connection_overlay.dart';
 import 'core/router/app_router.dart';
+import 'core/router/app_routes.dart';
 import 'features/alerts/data/repositories/alerts_repository.dart';
 import 'features/dashboard/data/repositories/dashboard_repository.dart';
 import 'features/inventory/data/repositories/inventory_repository.dart';
@@ -20,6 +22,11 @@ class MyApp extends StatefulWidget {
     this.itemDetailsRepository,
     this.movementHistoryRepository,
     this.reportsRepository,
+    this.connectionLost = false,
+    this.isRetryingConnection = false,
+    this.onRetryConnection,
+    this.initialLocation,
+    this.onLocationChanged,
   });
 
   final Duration previewLoadDelay;
@@ -29,6 +36,11 @@ class MyApp extends StatefulWidget {
   final ItemDetailsRepository? itemDetailsRepository;
   final MovementHistoryRepository? movementHistoryRepository;
   final ReportsRepository? reportsRepository;
+  final bool connectionLost;
+  final bool isRetryingConnection;
+  final VoidCallback? onRetryConnection;
+  final String? initialLocation;
+  final ValueChanged<String>? onLocationChanged;
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -37,6 +49,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   late final AppRouter _appRouter = AppRouter(
     previewLoadDelay: widget.previewLoadDelay,
+    initialLocation: widget.initialLocation ?? AppRoutePaths.dashboard,
     dashboardRepository: widget.dashboardRepository,
     alertsRepository: widget.alertsRepository,
     inventoryRepository: widget.inventoryRepository,
@@ -46,7 +59,20 @@ class _MyAppState extends State<MyApp> {
   );
 
   @override
+  void initState() {
+    super.initState();
+    _appRouter.router.routeInformationProvider.addListener(_reportLocation);
+  }
+
+  void _reportLocation() {
+    widget.onLocationChanged?.call(
+      _appRouter.router.routeInformationProvider.value.uri.toString(),
+    );
+  }
+
+  @override
   void dispose() {
+    _appRouter.router.routeInformationProvider.removeListener(_reportLocation);
     _appRouter.dispose();
     super.dispose();
   }
@@ -66,7 +92,18 @@ class _MyAppState extends State<MyApp> {
       ],
       builder: (context, child) => Directionality(
         textDirection: TextDirection.rtl,
-        child: child ?? const SizedBox.shrink(),
+        child: Stack(
+          children: [
+            child ?? const SizedBox.shrink(),
+            if (widget.connectionLost)
+              Positioned.fill(
+                child: ConnectionOverlay(
+                  isRetrying: widget.isRetryingConnection,
+                  onRetry: widget.onRetryConnection,
+                ),
+              ),
+          ],
+        ),
       ),
       routerConfig: _appRouter.router,
     );

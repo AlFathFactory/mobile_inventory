@@ -9,7 +9,7 @@ This document is both the project README and the handoff guide for future develo
 - Flutter application with Material 3 UI.
 - Arabic-only UI rendered right-to-left.
 - Preview data is an explicit app/test mode. Production repository factories return unavailable states when the Supabase client is absent.
-- Inventory saves viewed pages in Hive CE for partial offline browsing.
+- Production data is live-only; connection failures show an app-wide retry overlay.
 - State is managed by feature Cubits and `flutter_bloc`.
 - Navigation is handled by `go_router` with a state-preserving four-tab shell.
 - The Flutter shell renders independently of inventory and other feature requests.
@@ -48,51 +48,15 @@ The intentionally small dependency set is declared in `pubspec.yaml`:
 | `skeletonizer` | Feature-level loading presentation |
 | `cupertino_icons` | Standard icon asset package |
 | `flutter_lints` | Analyzer lint baseline used by `analysis_options.yaml` |
-| `hive_ce`, `hive_ce_flutter` | Typed, versioned local snapshots for production inventory reads |
+| `path_provider` | One-time removal of retired inventory cache files on upgrade |
+| `web` | One-time removal of retired browser IndexedDB boxes on upgrade |
 
-## Offline inventory cache
+## Connection recovery
 
-Production inventory uses Hive CE to save viewed pages. Preview
-mode remains separate: it uses `PreviewData` only and never reads or writes
-Hive data.
-
-`HiveCacheDatabase` opens two typed boxes:
-
-| Box | Stored value | Purpose |
-| --- | --- | --- |
-| `cache_metadata_v1` | `CacheMetadata` | Dataset version, active generation, last saved-page time, and recovery state |
-| `inventory_snapshots_v1` | `InventoryCacheRecord` | Viewed inventory rows keyed as `generation::table_name::item_id` |
-
-`HiveInventoryLocalDataSource` loads a committed generation once into indexed
-memory. Stable route ID lookup uses `table_name::item_id`, and category lookup
-uses an in-memory category index. Searches, filters, deterministic ordering,
-and cursor pagination then operate locally with the existing shared Arabic
-search normalizer; they do not repeatedly deserialize Hive records.
-
-### Page loading and offline coverage
-
-The production repository requests bounded server pages as the user scrolls
-and saves each successful page. It does not run the coordinator's full-catalog
-sync in the background. Pull to refresh requests the first page again and an
-unfiltered refresh replaces the saved generation. A failed request falls back
-to saved rows, using a local cursor. Arabic-normalized search and filters then
-operate over viewed items only; the UI labels this partial coverage.
-
-Schema version mismatches explicitly invalidate the active generation. Old
-records are retained until a replacement commits, then cleaned up as a
-non-critical follow-up. Cache invalidation therefore never deletes the last
-known-good snapshot merely because the server is unavailable.
-
-### Offline coverage
-
-Inventory list is partially offline-capable after a viewed page has been saved:
-category filters, Arabic-normalized search, stock/project filters, sorting,
-pagination, and item route IDs work over saved rows only.
-Item Details, Movement History, Dashboard, Alerts, and Reports still use
-their own live data dependencies. Their data is intentionally not presented
-as offline-capable until they receive separate snapshots for their item fields,
-movement pages, summaries, alerts, RPC aggregates, report filters, counts,
-and timelines.
+All production features read Supabase live. A connection failure shows a
+full-screen overlay with Retry. Retry validates a live read before reloading
+the app. Old inventory Hive files are removed on upgrade. See
+`doc/offline_cache.md` for details.
 
 ## Project structure
 
@@ -102,7 +66,7 @@ el_fateh/
 │   └── fonts/                       # IBM Plex Sans Arabic: Light, Medium, Bold
 ├── lib/
 │   ├── main.dart                    # Flutter entry point
-│   ├── startup/                    # Recoverable Hive and Supabase startup
+│   ├── startup/                    # Supabase startup and retired-cache cleanup
 │   ├── app.dart                     # MaterialApp.router, theme, locale, RTL direction
 │   ├── core/
 │   │   ├── data/
@@ -140,7 +104,7 @@ The app uses a lightweight feature-first architecture:
 
 ```text
 main()
-  -> ProductionStartup (Flutter loading/error state, Hive, async Supabase)
+  -> ProductionStartup (async Supabase and connection recovery)
   -> MyApp
      -> AppTheme.light
      -> AppRouter
@@ -154,7 +118,7 @@ main()
 ### Startup and lifetime
 
 1. `main.dart` initializes Flutter bindings and immediately calls `runApp(const ProductionStartup())`.
-2. `ProductionStartup` opens Hive CE independently, recovers interrupted metadata, and renders a retry screen if local initialization fails. Supabase initializes asynchronously and cannot hold the native splash.
+2. `ProductionStartup` initializes Supabase asynchronously and renders a full-screen connection recovery overlay when live reads cannot connect. It also deletes retired inventory cache files without blocking startup.
 3. `MyApp` creates one `AppRouter` for its widget lifetime. Production repository factories inject unavailable implementations until a client is ready; preview fixtures remain explicit.
 4. `AppRouter` owns long-lived feature Cubits and starts their loads after the first Flutter frame without awaiting network work. A feature failure does not block the shell or another route.
 5. When `MyApp` is disposed, `AppRouter.dispose()` disposes the router and feature Cubits.
