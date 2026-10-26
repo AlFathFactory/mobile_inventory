@@ -16,7 +16,7 @@ class ConnectionOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ColoredBox(
+    return Material(
       key: const Key('connection-overlay'),
       color: AppColors.background,
       child: SafeArea(
@@ -28,32 +28,33 @@ class ConnectionOverlay extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    width: 112,
-                    height: 112,
-                    decoration: BoxDecoration(
-                      color: AppColors.accentVerySoft,
-                      borderRadius: BorderRadius.circular(32),
-                    ),
-                    child: const Icon(
-                      Icons.wifi_off_rounded,
-                      color: AppColors.accent,
-                      size: 54,
-                    ),
+                  Image.asset(
+                    'assets/image/no_wifi.png',
+                    key: const Key('no-wifi-image'),
+                    width: 120,
+                    height: 120,
+                    fit: BoxFit.contain,
+                    semanticLabel: 'لا يوجد اتصال بالإنترنت',
                   ),
                   const SizedBox(height: 28),
                   Text(
                     'تعذر الاتصال',
                     textAlign: TextAlign.center,
-                    style: AppTextStyles.screenTitle.copyWith(fontSize: 24),
+                    style: AppTextStyles.screenTitle.copyWith(
+                      fontFamily: AppTextStyles.fontFamily,
+                      fontSize: 24,
+                      decoration: TextDecoration.none,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Text(
                     'تحقق من اتصالك بالإنترنت، ثم اضغط إعادة المحاولة لتحديث البيانات.',
                     textAlign: TextAlign.center,
                     style: AppTextStyles.body.copyWith(
+                      fontFamily: AppTextStyles.fontFamily,
                       fontSize: 15,
                       color: AppColors.neutral700,
+                      decoration: TextDecoration.none,
                     ),
                   ),
                   const SizedBox(height: 32),
@@ -63,6 +64,13 @@ class ConnectionOverlay extends StatelessWidget {
                     child: FilledButton.icon(
                       key: const Key('retry-connection'),
                       onPressed: isRetrying ? null : onRetry,
+                      style: FilledButton.styleFrom(
+                        textStyle: const TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
+                          fontWeight: FontWeight.w700,
+                          decoration: TextDecoration.none,
+                        ),
+                      ),
                       icon: isRetrying
                           ? const SizedBox.square(
                               dimension: 18,

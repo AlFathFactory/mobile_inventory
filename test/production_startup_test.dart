@@ -55,8 +55,11 @@ void main() {
     );
     await tester.pump();
     expect(find.byKey(const Key('connection-overlay')), findsOneWidget);
-    expect(find.byIcon(Icons.wifi_off_rounded), findsOneWidget);
+    expect(find.byKey(const Key('no-wifi-image')), findsOneWidget);
     expect(find.byKey(const Key('retry-connection')), findsOneWidget);
+    final title = tester.widget<Text>(find.text('تعذر الاتصال'));
+    expect(title.style?.fontFamily, 'IBMPlexSansArabic');
+    expect(title.style?.decoration, TextDecoration.none);
 
     await tester.tap(find.byKey(const Key('retry-connection')));
     await tester.pump();
